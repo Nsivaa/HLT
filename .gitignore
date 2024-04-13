@@ -1,0 +1,5 @@
+# other studies folder
+/studies
+
+# cache folder
+**/__pycache__/
