@@ -48,7 +48,7 @@ DATA_LOADERS = {
 def load_dataset(dataset: DatasetEnum):
     return DATA_LOADERS[dataset]()
 
-class EmotionsData(Dataset):
+class EmotionsData(Dataset):#TODO mapping labels to integers
     def __init__(self, dataframe, tokenizer, max_len):
         self.tokenizer = tokenizer
         self.text = dataframe['text']
@@ -72,7 +72,7 @@ class EmotionsData(Dataset):
             None,
             add_special_tokens=True,
             max_length=self.max_len,
-            pad_to_max_length=True,
+            padding='max_length',
             return_token_type_ids=True
         )
         ids = inputs['input_ids']
