@@ -58,6 +58,18 @@ def load_twitter_data(k_hot_encode=False):
     goemotions_train.columns = ['text', 'emotions']
     goemotions_val.columns = ['text', 'emotions']
     goemotions_test.columns = ['text', 'emotions']
+    if k_hot_encode:
+        # binarize emotions
+        goemotions_train['emotions'] = goemotions_train['emotions'].apply(lambda x: x.split(','))
+        goemotions_val['emotions'] = goemotions_val['emotions'].apply(lambda x: x.split(','))
+        goemotions_test['emotions'] = goemotions_test['emotions'].apply(lambda x: x.split(','))
+        mlb = MultiLabelBinarizer()
+        goemotions_train = goemotions_train.join(pd.DataFrame(mlb.fit_transform(goemotions_train.pop('emotions')),
+                                                          columns=mlb.classes_))
+        goemotions_val = goemotions_val.join(pd.DataFrame(mlb.fit_transform(goemotions_val.pop('emotions')),
+                                                      columns=mlb.classes_))
+        goemotions_test = goemotions_test.join(pd.DataFrame(mlb.fit_transform(goemotions_test.pop('emotions')),
+                                                        columns=mlb.classes_))
     return goemotions_train, goemotions_val, goemotions_test
 
 DATA_LOADERS = {
@@ -72,12 +84,9 @@ class EmotionsData(Dataset):#TODO mapping labels to integers
     def __init__(self, dataframe, tokenizer, max_len):
         self.tokenizer = tokenizer
         self.text = dataframe['text']
-        label_series = dataframe['emotions'].apply(lambda x: x.split(','))
-        mlb = MultiLabelBinarizer()
-        self.targets = mlb.fit_transform(label_series)
-        self.label_order = mlb.classes_
+        self.targets = dataframe.drop(columns=['text']).to_numpy()
         self.max_len = max_len
-        self.nclasses = len(self.label_order)
+        self.nclasses = len(self.targets[0])
 
     def __len__(self):
         return len(self.text)
@@ -120,7 +129,7 @@ def create_data_loader_from_dataframe(dataframe, tokenizer, max_len, **loader_pa
     )
 
 def create_data_loader(dataset: DatasetEnum, tokenizer, max_len, **loader_params):
-    train, val, test = load_dataset(dataset)
+    train, val, test = load_dataset(dataset, k_hot_encode=True)
     train_loader = create_data_loader_from_dataframe(train, tokenizer, max_len, **loader_params)
     val_loader = create_data_loader_from_dataframe(val, tokenizer, max_len, **loader_params)
     test_loader = create_data_loader_from_dataframe(test, tokenizer, max_len, **loader_params)
