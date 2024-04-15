@@ -4,6 +4,7 @@ from enum import Enum, auto
 from torch.utils.data import Dataset, DataLoader
 import torch
 from sklearn.preprocessing import MultiLabelBinarizer
+import json
 
 # enum of datasets
 class DatasetEnum(Enum):
@@ -12,9 +13,10 @@ class DatasetEnum(Enum):
 
 DATASET_DIR = 'dataset/'
 GOEMOTIONS_DATASET_DIR = DATASET_DIR + 'GoEmotionsSplit/'
+GOEMOTIONS_LABEL_MAPPING_PATH = GOEMOTIONS_DATASET_DIR + 'label_mapping.json'
 TWITTER_DATASET_DIR = DATASET_DIR + 'TwitterDataSplit/'
 
-def load_goemotions():
+def load_goemotions(k_hot_encode=False):
     # Load GoEmotions dataset
     goemotions_train = pd.read_csv(GOEMOTIONS_DATASET_DIR + '/train.tsv', sep='\t', header=None, index_col=False)
     goemotions_val = pd.read_csv(GOEMOTIONS_DATASET_DIR + '/dev.tsv', sep='\t', header=None, index_col=False)
@@ -27,9 +29,27 @@ def load_goemotions():
     goemotions_train.columns = ['text', 'emotions']
     goemotions_val.columns = ['text', 'emotions']
     goemotions_test.columns = ['text', 'emotions']
+    if k_hot_encode:
+        # binarize emotions
+        goemotions_train['emotions'] = goemotions_train['emotions'].apply(lambda x: x.split(','))
+        goemotions_val['emotions'] = goemotions_val['emotions'].apply(lambda x: x.split(','))
+        goemotions_test['emotions'] = goemotions_test['emotions'].apply(lambda x: x.split(','))
+        mlb = MultiLabelBinarizer()
+        goemotions_train = goemotions_train.join(pd.DataFrame(mlb.fit_transform(goemotions_train.pop('emotions')),
+                                                          columns=mlb.classes_))
+        goemotions_val = goemotions_val.join(pd.DataFrame(mlb.fit_transform(goemotions_val.pop('emotions')),
+                                                      columns=mlb.classes_))
+        goemotions_test = goemotions_test.join(pd.DataFrame(mlb.fit_transform(goemotions_test.pop('emotions')),
+                                                        columns=mlb.classes_))
+        # apply label mapping
+        with open(GOEMOTIONS_LABEL_MAPPING_PATH, 'r') as f:
+            label_mapping = json.load(f)
+            goemotions_train = goemotions_train.rename(columns=label_mapping)
+            goemotions_val = goemotions_val.rename(columns=label_mapping)
+            goemotions_test = goemotions_test.rename(columns=label_mapping)
     return goemotions_train, goemotions_val, goemotions_test
 
-def load_twitter_data():
+def load_twitter_data(k_hot_encode=False):
     # Load TwitterData dataset
     goemotions_train = pd.read_csv(TWITTER_DATASET_DIR + '/train.txt', sep=';', header=None, index_col=False)
     goemotions_val = pd.read_csv(TWITTER_DATASET_DIR + '/val.txt', sep=';', header=None, index_col=False)
@@ -45,8 +65,8 @@ DATA_LOADERS = {
     DatasetEnum.TwitterData: load_twitter_data
 }
 
-def load_dataset(dataset: DatasetEnum):
-    return DATA_LOADERS[dataset]()
+def load_dataset(dataset: DatasetEnum, **kwargs):
+    return DATA_LOADERS[dataset](**kwargs)
 
 class EmotionsData(Dataset):#TODO mapping labels to integers
     def __init__(self, dataframe, tokenizer, max_len):
