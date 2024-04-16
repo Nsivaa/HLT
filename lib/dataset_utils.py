@@ -78,16 +78,16 @@ def load_twitter_data(k_hot_encode=False):
 
 def load_goemotions_cleaned():
     # Load GoEmotions dataset
-    goemotions_train = pd.read_csv(GOEMOTIONSCLEAN_DATASET_DIR + '/train.tsv', sep='\t', index_col=False)
-    goemotions_val = pd.read_csv(GOEMOTIONSCLEAN_DATASET_DIR + '/dev.tsv', sep='\t', index_col=False)
-    goemotions_test = pd.read_csv(GOEMOTIONSCLEAN_DATASET_DIR + '/test.tsv', sep='\t', index_col=False)
+    goemotions_train = pd.read_csv(GOEMOTIONSCLEAN_DATASET_DIR + 'train.tsv', sep='\t', index_col=False)
+    goemotions_val = pd.read_csv(GOEMOTIONSCLEAN_DATASET_DIR + 'val.tsv', sep='\t', index_col=False)
+    goemotions_test = pd.read_csv(GOEMOTIONSCLEAN_DATASET_DIR + 'test.tsv', sep='\t', index_col=False)
     return goemotions_train, goemotions_val, goemotions_test
 
 def load_twitter_data_cleaned():
     # Load TwitterData dataset
-    goemotions_train = pd.read_csv(TWITTERCLEAN_DATASET_DIR + '/train.txt', sep='\t', index_col=False)
-    goemotions_val = pd.read_csv(TWITTERCLEAN_DATASET_DIR + '/val.txt', sep='\t', index_col=False)
-    goemotions_test = pd.read_csv(TWITTERCLEAN_DATASET_DIR + '/test.txt', sep='\t', index_col=False)
+    goemotions_train = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'train.txt', sep='\t', index_col=False)
+    goemotions_val = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'val.txt', sep='\t', index_col=False)
+    goemotions_test = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'test.txt', sep='\t', index_col=False)
     return goemotions_train, goemotions_val, goemotions_test
 
 DATA_LOADERS = {
@@ -101,6 +101,7 @@ def load_dataset(dataset: DatasetEnum, **kwargs):
     return DATA_LOADERS[dataset](**kwargs)
 
 class EmotionsData(Dataset):#TODO mapping labels to integers
+    #TODO tokenize on init
     def __init__(self, dataframe, tokenizer, max_len):
         self.tokenizer = tokenizer
         self.text = dataframe['text']
@@ -148,8 +149,8 @@ def create_data_loader_from_dataframe(dataframe, tokenizer, max_len, **loader_pa
         **loader_params
     )
 
-def create_data_loader(dataset: DatasetEnum, tokenizer, max_len, **loader_params):
-    train, val, test = load_dataset(dataset)
+def create_data_loader(dataset: DatasetEnum, tokenizer, max_len, dataset_loader_param_dict={}, **loader_params):
+    train, val, test = load_dataset(dataset, **dataset_loader_param_dict)
     train_loader = create_data_loader_from_dataframe(train, tokenizer, max_len, **loader_params)
     val_loader = create_data_loader_from_dataframe(val, tokenizer, max_len, **loader_params)
     test_loader = create_data_loader_from_dataframe(test, tokenizer, max_len, **loader_params)
