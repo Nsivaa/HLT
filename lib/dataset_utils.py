@@ -100,14 +100,26 @@ DATA_LOADERS = {
 def load_dataset(dataset: DatasetEnum, **kwargs):
     return DATA_LOADERS[dataset](**kwargs)
 
+def compute_max_tokens(dataframe_list, tokenizer):
+    max_len = 0
+    for dataframe in dataframe_list:
+        for text in dataframe['text']:
+            tokens = tokenizer.encode(text)
+            max_len = max(max_len, len(tokens))
+    return max_len
+
 class EmotionsData(Dataset):#TODO mapping labels to integers
     #TODO tokenize on init
-    def __init__(self, dataframe, tokenizer, max_len):
+    def __init__(self, dataframe, tokenizer, max_len=None, truncation=True):
         self.tokenizer = tokenizer
         self.text = dataframe['text']
         self.targets = dataframe.drop(columns=['text']).to_numpy()
-        self.max_len = max_len
+        if max_len is None:
+            self.max_len = max([len(self.tokenizer.encode(text)) for text in self.text])
+        else:
+            self.max_len = max_len
         self.nclasses = len(self.targets[0])
+        self.truncation = truncation
 
     def __len__(self):
         return len(self.text)
@@ -123,7 +135,8 @@ class EmotionsData(Dataset):#TODO mapping labels to integers
             add_special_tokens=True,
             max_length=self.max_len,
             padding='max_length',
-            return_token_type_ids=True
+            return_token_type_ids=True,
+            truncation = self.truncation
         )
         ids = inputs['input_ids']
         mask = inputs['attention_mask']
@@ -137,11 +150,12 @@ class EmotionsData(Dataset):#TODO mapping labels to integers
             'targets': torch.tensor(self.targets[index], dtype=torch.float)
         }
     
-def create_data_loader_from_dataframe(dataframe, tokenizer, max_len, **loader_params):
+def create_data_loader_from_dataframe(dataframe, tokenizer, max_len=None, truncation=True, **loader_params):
     ds = EmotionsData(
         dataframe=dataframe,
         tokenizer=tokenizer,
-        max_len=max_len
+        max_len=max_len,
+        truncation=truncation
     )
 
     return DataLoader(
