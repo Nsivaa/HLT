@@ -154,6 +154,7 @@ class EmotionsData(Dataset):
     def __getitem__(self, index):
 
         return {
+            'index': index, # to adress shuffling
             'ids': self.ids[index],
             'mask': self.mask[index],
             'token_type_ids': self.token_type_ids[index],
