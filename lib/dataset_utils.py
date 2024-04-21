@@ -128,7 +128,7 @@ class EmotionsData(Dataset):
         # tokenize text
         for i, text in enumerate(self.text):
             # normalize whitespace
-            text = str(self.text[i])
+            text = str(text)
             text = " ".join(text.split())
 
             inputs = self.tokenizer.encode_plus(
