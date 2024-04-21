@@ -108,46 +108,56 @@ def compute_max_tokens(dataframe_list, tokenizer):
             max_len = max(max_len, len(tokens))
     return max_len
 
-class EmotionsData(Dataset):#TODO mapping labels to integers
-    #TODO tokenize on init
+'''
+used for dataset in pytorch, tokenizes text once during initialization (best suited for small datasets)
+'''
+class EmotionsData(Dataset):
     def __init__(self, dataframe, tokenizer, max_len=None, truncation=True):
         self.tokenizer = tokenizer
         self.text = dataframe['text']
         self.targets = dataframe.drop(columns=['text']).to_numpy()
+        self.ids = []
+        self.mask = []
+        self.token_type_ids = []
         if max_len is None:
             self.max_len = max([len(self.tokenizer.encode(text)) for text in self.text])
         else:
             self.max_len = max_len
         self.nclasses = len(self.targets[0])
         self.truncation = truncation
+        # tokenize text
+        for i, text in enumerate(self.text):
+            # normalize whitespace
+            text = str(self.text[i])
+            text = " ".join(text.split())
+
+            inputs = self.tokenizer.encode_plus(
+                text,
+                None,
+                add_special_tokens=True,
+                max_length=self.max_len,
+                truncation=self.truncation,
+                padding='max_length',
+                return_token_type_ids=True
+            )
+            self.ids.append(inputs['input_ids'])
+            self.mask.append(inputs['attention_mask'])
+            self.token_type_ids.append(inputs['token_type_ids'])
+        self.ids = torch.tensor(self.ids, dtype=torch.long)
+        self.mask = torch.tensor(self.mask, dtype=torch.long)
+        self.token_type_ids = torch.tensor(self.token_type_ids, dtype=torch.long)
+        self.targets = torch.tensor(self.targets, dtype=torch.float)
 
     def __len__(self):
         return len(self.text)
 
     def __getitem__(self, index):
-        # normalize whitespace
-        text = str(self.text[index])
-        text = " ".join(text.split())
-
-        inputs = self.tokenizer.encode_plus(
-            text,
-            None,
-            add_special_tokens=True,
-            max_length=self.max_len,
-            padding='max_length',
-            return_token_type_ids=True,
-            truncation = self.truncation
-        )
-        ids = inputs['input_ids']
-        mask = inputs['attention_mask']
-        token_type_ids = inputs["token_type_ids"]
-
 
         return {
-            'ids': torch.tensor(ids, dtype=torch.long),
-            'mask': torch.tensor(mask, dtype=torch.long),
-            'token_type_ids': torch.tensor(token_type_ids, dtype=torch.long),
-            'targets': torch.tensor(self.targets[index], dtype=torch.float)
+            'ids': self.ids[index],
+            'mask': self.mask[index],
+            'token_type_ids': self.token_type_ids[index],
+            'targets': self.targets[index]
         }
     
 def create_data_loader_from_dataframe(dataframe, tokenizer, max_len=None, truncation=True, **loader_params):
