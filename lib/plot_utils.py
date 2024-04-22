@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 
 # create confusion matrix of multilabel classification
 def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize=False):
@@ -14,6 +14,8 @@ def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normaliz
                 confusion_matrix[i,:] += pred_el
     if normalize:
         confusion_matrix = confusion_matrix / confusion_matrix.sum(axis=1, keepdims=True)
+        # keep only last 2 digits
+        confusion_matrix = np.round(confusion_matrix, 2)
     return confusion_matrix
 
 def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False):
@@ -22,7 +24,7 @@ def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, no
     sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=label_pred, yticklabels=label_true, cmap='coolwarm')
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
-    return ax
+    plt.show()
 
 def tune_sigmoid_threshold(y_true, y_pred, metric_fun=accuracy_score, metric_params={}, is_maximization=True, return_only_best=True):
     thresholds = np.arange(0, 1, 0.01)
@@ -46,3 +48,13 @@ def plot_threshold_tuning(y_true, y_pred, metric_fun=accuracy_score, metric_para
         plt.show()
         print(f'Best threshold: {best_threshold}')
         print(f'Best {metric_name}: {max(scores) if is_maximization else min(scores)}')
+
+def plot_score_barplot(y_true, y_pred, class_names, metric_fun=f1_score, metric_params={'average': None}, metric_name='F1 score'):
+    class_scores = metric_fun(y_true, y_pred, **metric_params)
+    plt.figure(figsize=(10,5))
+    # rotate x labels
+    plt.xticks(rotation=90)
+    plt.bar(class_names, class_scores, color=sns.color_palette("viridis", len(class_names)))
+    plt.xlabel('Class')
+    plt.ylabel(metric_name)
+    plt.title(f'{metric_name} for each class')
