@@ -51,7 +51,7 @@ class HoldOutCrossValidation:
                 continue
             model = self.model_class(**params)
             model.fit(self.train_df)
-            scores = model.evaluate(self.val_df)#TODO usare predict invece?
+            scores = model.evaluate(self.val_df, scores=self.scores)
             self.results = self.results.append(pd.Series({**params, **scores}), ignore_index=True)
             ckpt -= 1
             if self.res_file is not None and ckpt == 0:

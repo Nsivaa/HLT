@@ -176,11 +176,12 @@ class SimpleModelInterface:
         predictions, _ =  self._predict(testing_loader)
         return predictions
 
-    def evaluate(self, testing_df):
+    def evaluate(self, testing_df, custom_scores=None):
         testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
         predictions, targets = self._predict(testing_loader, accumulate_targets=True)
         # calculate scores
-        scores = {name: score(targets, predictions) for name, score in self.scores.items()}
+        scores_to_compute = self.scores if custom_scores is None else custom_scores
+        scores = {name: score(targets, predictions) for name, score in scores_to_compute.items()}
         return scores
 
     def get_train_scores(self):
@@ -198,3 +199,32 @@ class SimpleModelInterface:
     def save_model(self, model_path, vocabulary_path):
         torch.save(self.model, model_path)
         self.tokenizer.save_vocabulary(vocabulary_path)
+
+
+'''
+function to perform statistical testing to compare 2 models using bootstrap
+'''
+def bootstrap_test(model1, model2, testing_df, n_tests, sample_size, metric_fun, metric_name):
+    # initial evaluation
+    score1 = model1.evaluate(testing_df, custom_scores={metric_name: metric_fun})[metric_name]
+    score2 = model2.evaluate(testing_df, custom_scores={metric_name: metric_fun})[metric_name]
+    print(f'Initial {metric_name}: {score1} {score2}')
+    best_model = 1 if score1 > score2 else 2
+    if score1 < score2:
+        model1, model2 = model2, model1
+        score1, score2 = score2, score1
+    delta = score1 - score2
+    print(f'Best model: {best_model}, with delta: {delta}')
+    # perform bootstrap
+    successes = 0
+    for _ in range(n_tests):
+        sample1 = np.random.choice(testing_df.index, sample_size)
+        sample2 = np.random.choice(testing_df.index, sample_size)
+        score1 = model1.evaluate(testing_df.loc[sample1], custom_scores={metric_name: metric_fun})[metric_name]
+        score2 = model2.evaluate(testing_df.loc[sample2], custom_scores={metric_name: metric_fun})[metric_name]
+        cur_delta = score1 - score2
+        if cur_delta > 2*delta:
+            successes += 1
+    print(f'Successes: {successes}/{n_tests}')
+    print(f'p-value: {successes/n_tests}')
+    return successes/n_tests
