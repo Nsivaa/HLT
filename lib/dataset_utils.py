@@ -154,14 +154,13 @@ class EmotionsData(Dataset):
     def __getitem__(self, index):
 
         return {
-            'index': index, # to adress shuffling
             'ids': self.ids[index],
             'mask': self.mask[index],
             'token_type_ids': self.token_type_ids[index],
             'targets': self.targets[index]
         }
     
-def create_data_loader_from_dataframe(dataframe, tokenizer, max_len=None, truncation=True, **loader_params):
+def create_data_loader_from_dataframe(dataframe, tokenizer, max_len=None, truncation=True, batch_size=8, shuffle=True, num_workers=0):
     ds = EmotionsData(
         dataframe=dataframe,
         tokenizer=tokenizer,
@@ -171,12 +170,14 @@ def create_data_loader_from_dataframe(dataframe, tokenizer, max_len=None, trunca
 
     return DataLoader(
         ds,
-        **loader_params
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers
     )
 
-def create_data_loader(dataset: DatasetEnum, tokenizer, max_len, dataset_loader_param_dict={}, **loader_params):
+def create_data_loader(dataset: DatasetEnum, tokenizer, max_len, dataset_loader_param_dict={}, batch_size=8, shuffle=True, num_workers=0):
     train, val, test = load_dataset(dataset, **dataset_loader_param_dict)
-    train_loader = create_data_loader_from_dataframe(train, tokenizer, max_len, **loader_params)
-    val_loader = create_data_loader_from_dataframe(val, tokenizer, max_len, **loader_params)
-    test_loader = create_data_loader_from_dataframe(test, tokenizer, max_len, **loader_params)
+    train_loader = create_data_loader_from_dataframe(train, tokenizer, max_len, batch_size, shuffle, num_workers)
+    val_loader = create_data_loader_from_dataframe(val, tokenizer, max_len, batch_size, shuffle, num_workers)
+    test_loader = create_data_loader_from_dataframe(test, tokenizer, max_len, batch_size, shuffle, num_workers)
     return train_loader, val_loader, test_loader

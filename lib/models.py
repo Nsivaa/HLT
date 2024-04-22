@@ -47,7 +47,7 @@ utility function to create parameters for the model
 def create_model_params(optimizer=torch.optim.Adam,
                         tokenizer=RobertaTokenizer.from_pretrained('roberta-base', truncation=True, do_lower_case=True),
                         tokenizer_max_len=None,
-                        loader_params={'batch_size': 8, 'shuffle': True, 'num_workers': 0},
+                        batch_size=8,
                         loss_function=torch.nn.BCEWithLogitsLoss(),
                         epochs=1,
                         learning_rate=1e-05,
@@ -57,7 +57,7 @@ def create_model_params(optimizer=torch.optim.Adam,
         'optimizer': optimizer,
         'tokenizer': tokenizer,
         'tokenizer_max_len': tokenizer_max_len,
-        'loader_params': loader_params,
+        'batch_size': batch_size,
         'loss_function': loss_function,
         'epochs': epochs,
         'learning_rate': learning_rate,
@@ -145,17 +145,16 @@ class SimpleModelInterface:
             self.model.to(self.device)
 
     def fit(self, training_df, validation_df=None):
-        training_loader = create_data_loader_from_dataframe(training_df, self.params['tokenizer'], self.params['tokenizer_max_len'], **self.params['loader_params'])
+        training_loader = create_data_loader_from_dataframe(training_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=True)
         validation_loader = None
         if validation_df is not None:
-            validation_loader = create_data_loader_from_dataframe(validation_df, self.params['tokenizer'], self.params['tokenizer_max_len'], **self.params['loader_params'])
+            validation_loader = create_data_loader_from_dataframe(validation_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
         self._train(training_loader, validation_loader)
 
     def _predict(self, data_loader, accumulate_targets=False):
         self.model.eval()
         # initialize target and prediction matrices
         predictions_acc = []
-        permutation_acc = []
         targets_acc = []
         with torch.no_grad():
             for _, data in tqdm(enumerate(data_loader, 0)):
@@ -166,22 +165,19 @@ class SimpleModelInterface:
                 outputs = self.model(ids, mask, token_type_ids).squeeze()
                 # append predictions and targets
                 predictions_acc.extend(torch.sigmoid(outputs).detach().cpu().numpy())
-                permutation_acc.extend(data['index'].numpy())
                 if accumulate_targets:
                     targets_acc.extend(targets.detach().cpu().numpy())
-        # reverse permutation of predictions
-        permutation_acc = np.array(permutation_acc)
         targets_acc = np.array(targets_acc)
         predictions_acc = np.array(predictions_acc)
-        return predictions_acc[np.argsort(permutation_acc)], targets_acc[np.argsort(permutation_acc)] if accumulate_targets else None
+        return predictions_acc, targets_acc
 
     def predict(self, testing_df):
-        testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], **self.params['loader_params'])
+        testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
         predictions, _ =  self._predict(testing_loader)
         return predictions
 
     def evaluate(self, testing_df):
-        testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], **self.params['loader_params'])
+        testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
         predictions, targets = self._predict(testing_loader, accumulate_targets=True)
         # calculate scores
         scores = {name: score(targets, predictions) for name, score in self.scores.items()}
