@@ -13,7 +13,10 @@ def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normaliz
             if true_el[i] == 1:
                 confusion_matrix[i,:] += pred_el
     if normalize:
-        confusion_matrix = confusion_matrix / confusion_matrix.sum(axis=1, keepdims=True)
+        sum = confusion_matrix.sum(axis=1, keepdims=True)
+        # avoid division by zero
+        sum[sum == 0] = 1
+        confusion_matrix = confusion_matrix / sum
         # keep only last 2 digits
         confusion_matrix = np.round(confusion_matrix, 2)
     return confusion_matrix

@@ -181,3 +181,13 @@ def create_data_loader(dataset: DatasetEnum, tokenizer, max_len, dataset_loader_
     val_loader = create_data_loader_from_dataframe(val, tokenizer, max_len, batch_size, shuffle, num_workers)
     test_loader = create_data_loader_from_dataframe(test, tokenizer, max_len, batch_size, shuffle, num_workers)
     return train_loader, val_loader, test_loader
+
+# temporary function for testing, in multilabel can sample same record even if replace=False
+def equal_sample(df, label_cols, sample_size, replace=False):
+    # downsample to have a balanced distribution
+    samples = []
+    # sample min_size samples from each class
+    for label in label_cols:
+        samples.append(df[df[label == 1]].sample(sample_size, replace=replace))
+    samples_df = pd.concat(samples)
+    return samples_df
