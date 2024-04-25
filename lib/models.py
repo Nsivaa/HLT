@@ -218,12 +218,11 @@ def bootstrap_test(model1, model2, testing_df, n_tests, sample_size, metric_fun,
     # perform bootstrap
     successes = 0
     for _ in range(n_tests):
-        sample1 = np.random.choice(testing_df.index, sample_size)
-        sample2 = np.random.choice(testing_df.index, sample_size)
-        score1 = model1.evaluate(testing_df.loc[sample1], custom_scores={metric_name: metric_fun})[metric_name]
-        score2 = model2.evaluate(testing_df.loc[sample2], custom_scores={metric_name: metric_fun})[metric_name]
+        sample = np.random.choice(testing_df.index, sample_size)
+        score1 = model1.evaluate(testing_df.loc[sample], custom_scores={metric_name: metric_fun})[metric_name]
+        score2 = model2.evaluate(testing_df.loc[sample], custom_scores={metric_name: metric_fun})[metric_name]
         cur_delta = score1 - score2
-        if cur_delta > 2*delta:
+        if cur_delta >= 2*delta:
             successes += 1
     print(f'Successes: {successes}/{n_tests}')
     print(f'p-value: {successes/n_tests}')
