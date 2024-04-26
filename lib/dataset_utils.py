@@ -85,9 +85,9 @@ def load_goemotions_cleaned():
 
 def load_twitter_data_cleaned():
     # Load TwitterData dataset
-    goemotions_train = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'train.txt', sep='\t', index_col=False)
-    goemotions_val = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'val.txt', sep='\t', index_col=False)
-    goemotions_test = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'test.txt', sep='\t', index_col=False)
+    goemotions_train = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'train.tsv', sep='\t', index_col=False)
+    goemotions_val = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'val.tsv', sep='\t', index_col=False)
+    goemotions_test = pd.read_csv(TWITTERCLEAN_DATASET_DIR + 'test.tsv', sep='\t', index_col=False)
     return goemotions_train, goemotions_val, goemotions_test
 
 DATA_LOADERS = {
