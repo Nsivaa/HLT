@@ -1,7 +1,7 @@
 
 import numpy as np
 import torch
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 from transformers import RobertaModel, RobertaTokenizer
 from torch import cuda
 from lib.dataset_utils import *
@@ -84,16 +84,18 @@ class SimpleModelInterface:
         self.device = 'cuda' if cuda.is_available() else 'cpu'
         model.to(self.device)
 
-    def _train(self, training_loader, validation_loader=None, save_path=None):
+    def _train(self, training_loader, validation_loader=None, save_path=None, progress_bar_epoch=True, progress_bar_step=True):
         self.model.train()
         #TODO usare confusion matrix?
         cur_patience = self.params['val_patience']
         best_val_loss = np.inf
-        for _ in range(self.params['epochs']):
+        for _ in tqdm(range(self.params['epochs']), disable=not progress_bar_epoch):
+            if progress_bar_epoch:
+                print(f'Epoch {_+1}/{self.params["epochs"]}')
             tr_loss = 0
             predictions_acc = []
             targets_acc = []
-            for _,data in tqdm(enumerate(training_loader, 0)):
+            for data in tqdm(training_loader, disable=not progress_bar_step):
                 ids = data['ids'].to(self.device, dtype = torch.long)
                 mask = data['mask'].to(self.device, dtype = torch.long)
                 token_type_ids = data['token_type_ids'].to(self.device, dtype = torch.long)
@@ -144,20 +146,20 @@ class SimpleModelInterface:
             self.model = torch.load(save_path)
             self.model.to(self.device)
 
-    def fit(self, training_df, validation_df=None):
+    def fit(self, training_df, validation_df=None, progress_bar_epoch=False, progress_bar_step=False):
         training_loader = create_data_loader_from_dataframe(training_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=True)
         validation_loader = None
         if validation_df is not None:
             validation_loader = create_data_loader_from_dataframe(validation_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
-        self._train(training_loader, validation_loader)
+        self._train(training_loader, validation_loader, progress_bar_epoch=progress_bar_epoch, progress_bar_step=progress_bar_step)
 
-    def _predict(self, data_loader, accumulate_targets=False):
+    def _predict(self, data_loader, accumulate_targets=False, progress_bar=True):
         self.model.eval()
         # initialize target and prediction matrices
         predictions_acc = []
         targets_acc = []
         with torch.no_grad():
-            for _, data in tqdm(enumerate(data_loader, 0)):
+            for data in tqdm(data_loader, disable=not progress_bar):
                 ids = data['ids'].to(self.device, dtype = torch.long)
                 mask = data['mask'].to(self.device, dtype = torch.long)
                 token_type_ids = data['token_type_ids'].to(self.device, dtype=torch.long)
@@ -171,9 +173,9 @@ class SimpleModelInterface:
         predictions_acc = np.array(predictions_acc)
         return predictions_acc, targets_acc
 
-    def predict(self, testing_df):
+    def predict(self, testing_df, progress_bar=False):
         testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
-        predictions, _ =  self._predict(testing_loader)
+        predictions, _ =  self._predict(testing_loader, progress_bar=progress_bar)
         return predictions
 
     def evaluate(self, testing_df, custom_scores=None):

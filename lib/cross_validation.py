@@ -2,6 +2,7 @@
 import os
 import itertools
 import pandas as pd
+from tqdm.notebook import tqdm
 
 '''
     Performs hold-out cross validation
@@ -44,8 +45,15 @@ class HoldOutCrossValidation:
     def _get_param_combinations(self):
         return [dict(zip(self.param_dict.keys(), values)) for values in itertools.product(*self.param_dict.values())]
 
-    def run(self):
+    def run(self, progress_bar=True):
         ckpt = self.checkpoint_interval
+        if progress_bar:
+            # compute the total number of iterations
+            total_iterations = 0
+            for _ in self._get_param_combinations():
+                if self.results.loc[(self.results[list(_)] == pd.Series(_)).all(axis=1)].shape[0] == 0:
+                    total_iterations += 1
+            pbar = tqdm.tqdm(total=total_iterations)
         for params in self._get_param_combinations():
             if self.results.loc[(self.results[list(params)] == pd.Series(params)).all(axis=1)].shape[0] > 0:
                 continue
@@ -63,7 +71,11 @@ class HoldOutCrossValidation:
                 # save results
                 self.results.to_csv(self.res_file, index=False)
                 ckpt = self.checkpoint_interval
-
+            if progress_bar:
+                pbar.update(1)
+        
+        if progress_bar:
+            pbar.close()
         if self.res_file is not None:
             self.results.to_csv(self.res_file, index=False)
     
