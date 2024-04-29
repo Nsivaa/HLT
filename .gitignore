@@ -3,3 +3,6 @@
 
 # cache folder
 **/__pycache__/
+
+# checkpoint folder
+/checkpoints

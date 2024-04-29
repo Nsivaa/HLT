@@ -24,16 +24,16 @@ class RobertaClass(torch.nn.Module):
             for i in range(frozen_layers):
                 for param in self.l1.encoder.layer[i].parameters():
                     param.requires_grad = False
-        self.pre_classifier = torch.nn.Linear(768, 768)#TODO add_module?
-        self.dropout = torch.nn.Dropout(0.3)
+        #self.pre_classifier = torch.nn.Linear(768, 768)#TODO add_module?
+        self.dropout = torch.nn.Dropout(0.1)#TODO 0.3?
         self.classifier = torch.nn.Linear(768, n_classes)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
         hidden_state = output_1[0]#TODO ???
         pooler = hidden_state[:, 0]
-        pooler = self.pre_classifier(pooler)
-        pooler = torch.nn.ReLU()(pooler)
+        #pooler = self.pre_classifier(pooler)
+        #pooler = torch.nn.ReLU()(pooler)#TODO remove?
         pooler = self.dropout(pooler)
         output = self.classifier(pooler)
         return output
@@ -52,7 +52,7 @@ def create_model_params(optimizer=torch.optim.Adam,
                         epochs=1,
                         learning_rate=1e-05,
                         regularization=0,
-                        val_patience=1,
+                        val_patience=np.inf,
                         clip_grad_norm=-1):
     return {
         'optimizer': optimizer,
@@ -88,6 +88,7 @@ class SimpleModelInterface:
 
     def _train(self, training_loader, validation_loader=None, save_path=None, progress_bar_epoch=True, progress_bar_step=True):
         self.model.train()
+        self.val_scores['loss'] = []
         #TODO usare confusion matrix?
         cur_patience = self.params['val_patience']
         best_val_loss = np.inf
@@ -128,10 +129,9 @@ class SimpleModelInterface:
 
             # calculate validation scores
             if validation_loader is not None:
-                val_scores = self._evaluate(validation_loader, progress_bar=progress_bar_step)
+                val_scores = self._evaluate(validation_loader, progress_bar=progress_bar_step, compute_loss=True)
                 for name, score in val_scores.items():
                     self.val_scores[name].append(score)
-                self.val_loss.append(val_scores['loss'])
                 if val_scores['loss'] < best_val_loss:
                     best_val_loss = val_scores['loss']
                     cur_patience = self.params['val_patience']
@@ -142,6 +142,13 @@ class SimpleModelInterface:
                     cur_patience -= 1
                 if cur_patience == 0:
                     break
+
+        if validation_loader is not None:
+            # append validation loss to the correct list
+            for el in self.val_scores['loss']:
+                self.val_loss.append(el)
+            # delete loss from val_scores
+            del self.val_scores['loss']
 
         # restore best model
         if save_path is not None and validation_loader is not None:
@@ -155,11 +162,12 @@ class SimpleModelInterface:
             validation_loader = create_data_loader_from_dataframe(validation_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
         self._train(training_loader, validation_loader, progress_bar_epoch=progress_bar_epoch, progress_bar_step=progress_bar_step)
 
-    def _predict(self, data_loader, accumulate_targets=False, progress_bar=True):
+    def _predict(self, data_loader, accumulate_targets=False, progress_bar=True, accumulate_loss=False):
         self.model.eval()
         # initialize target and prediction matrices
         predictions_acc = []
         targets_acc = []
+        loss_acc = 0
         with torch.no_grad():
             for data in tqdm(data_loader, disable=not progress_bar):
                 ids = data['ids'].to(self.device, dtype = torch.long)
@@ -171,25 +179,30 @@ class SimpleModelInterface:
                 predictions_acc.extend(torch.sigmoid(outputs).detach().cpu().numpy())
                 if accumulate_targets:
                     targets_acc.extend(targets.detach().cpu().numpy())
+                if accumulate_loss:
+                    loss_acc += self.params['loss_function'](outputs, targets).item()
         targets_acc = np.array(targets_acc)
         predictions_acc = np.array(predictions_acc)
-        return predictions_acc, targets_acc
+        return predictions_acc, targets_acc, loss_acc/len(data_loader) if accumulate_loss else None
 
     def predict(self, testing_df, progress_bar=False):
         testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
-        predictions, _ =  self._predict(testing_loader, progress_bar=progress_bar)
+        predictions, _, _ =  self._predict(testing_loader, progress_bar=progress_bar)
         return predictions
 
-    def _evaluate(self, test_loader, custom_scores=None, progress_bar=False):
-        predictions, targets = self._predict(test_loader, accumulate_targets=True, progress_bar=progress_bar)
+    def _evaluate(self, test_loader, custom_scores=None, progress_bar=False, compute_loss=False):
+        predictions, targets, loss = self._predict(test_loader, accumulate_targets=True, progress_bar=progress_bar, accumulate_loss=compute_loss)
         # calculate scores
         scores_to_compute = self.scores if custom_scores is None else custom_scores
         scores = {name: score(targets, predictions) for name, score in scores_to_compute.items()}
+        if compute_loss:
+            scores['loss'] = loss
         return scores
 
     def evaluate(self, testing_df, custom_scores=None, progress_bar=False):
         testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
-        return self._evaluate(testing_loader, custom_scores, progress_bar=progress_bar)
+        scores, _ = self._evaluate(testing_loader, custom_scores, progress_bar=progress_bar)
+        return scores
 
     def get_train_scores(self):
         return self.train_scores
@@ -203,9 +216,8 @@ class SimpleModelInterface:
     def get_val_loss(self):
         return self.val_loss
     
-    def save_model(self, model_path, vocabulary_path):
+    def save_model(self, model_path):
         torch.save(self.model, model_path)
-        self.tokenizer.save_vocabulary(vocabulary_path)
 
 
 '''
