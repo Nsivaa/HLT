@@ -51,6 +51,7 @@ def create_model_params(optimizer=torch.optim.Adam,
                         loss_function=torch.nn.BCEWithLogitsLoss(),
                         epochs=1,
                         learning_rate=1e-05,
+                        regularization=0,
                         val_patience=1,
                         clip_grad_norm=-1):
     return {
@@ -61,6 +62,7 @@ def create_model_params(optimizer=torch.optim.Adam,
         'loss_function': loss_function,
         'epochs': epochs,
         'learning_rate': learning_rate,
+        'regularization': regularization,
         'val_patience': val_patience,
         'clip_grad_norm': clip_grad_norm
     }
@@ -75,7 +77,7 @@ class SimpleModelInterface:
                  model_params_dict=create_model_params()):
         self.model = model
         self.params = model_params_dict
-        self.optimizer = model_params_dict['optimizer'](params=model.parameters(), lr=model_params_dict['learning_rate'])
+        self.optimizer = model_params_dict['optimizer'](params=model.parameters(), lr=model_params_dict['learning_rate'], weight_decay=model_params_dict['regularization'])
         self.scores = scores
         self.train_scores = {name: [] for name in scores.keys()}
         self.train_loss = []
@@ -126,7 +128,7 @@ class SimpleModelInterface:
 
             # calculate validation scores
             if validation_loader is not None:
-                val_scores = self.evaluate(validation_loader)
+                val_scores = self._evaluate(validation_loader, progress_bar=progress_bar_step)
                 for name, score in val_scores.items():
                     self.val_scores[name].append(score)
                 self.val_loss.append(val_scores['loss'])
@@ -178,13 +180,16 @@ class SimpleModelInterface:
         predictions, _ =  self._predict(testing_loader, progress_bar=progress_bar)
         return predictions
 
-    def evaluate(self, testing_df, custom_scores=None):
-        testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
-        predictions, targets = self._predict(testing_loader, accumulate_targets=True)
+    def _evaluate(self, test_loader, custom_scores=None, progress_bar=False):
+        predictions, targets = self._predict(test_loader, accumulate_targets=True, progress_bar=progress_bar)
         # calculate scores
         scores_to_compute = self.scores if custom_scores is None else custom_scores
         scores = {name: score(targets, predictions) for name, score in scores_to_compute.items()}
         return scores
+
+    def evaluate(self, testing_df, custom_scores=None, progress_bar=False):
+        testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
+        return self._evaluate(testing_loader, custom_scores, progress_bar=progress_bar)
 
     def get_train_scores(self):
         return self.train_scores

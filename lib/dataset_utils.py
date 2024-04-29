@@ -188,6 +188,6 @@ def equal_sample(df, label_cols, sample_size, replace=False):
     samples = []
     # sample min_size samples from each class
     for label in label_cols:
-        samples.append(df[df[label == 1]].sample(sample_size, replace=replace))
+        samples.append(df[df[label] == 1].sample(sample_size, replace=replace))
     samples_df = pd.concat(samples)
     return samples_df
