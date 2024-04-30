@@ -23,7 +23,7 @@ def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normaliz
 
 def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False):
     confusion_matrix = multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize)
-    fig, ax = plt.subplots(figsize=(10,10))
+    fig, ax = plt.subplots(figsize=(15,10))
     sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=label_pred, yticklabels=label_true, cmap='coolwarm')
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
