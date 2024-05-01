@@ -4,6 +4,7 @@ import itertools
 import pandas as pd
 from tqdm.notebook import tqdm
 from lib.models import SimpleModelInterface
+import numpy as np
 
 '''
     Performs hold-out cross validation
@@ -54,7 +55,7 @@ class HoldOutCrossValidation:
     def _get_param_combinations(self):
         return [dict(zip(self.param_dict.keys(), values)) for values in itertools.product(*self.param_dict.values())]
 
-    def run(self, progress_bar=True):
+    def run(self, progress_bar=True, model_checkpoint_path=None):
         ckpt = self.checkpoint_interval
         if progress_bar:
             # compute the total number of iterations
@@ -66,12 +67,15 @@ class HoldOutCrossValidation:
         for params in self._get_param_combinations():
             if self.results.loc[(self.results[list(params)] == pd.Series(params)).all(axis=1)].shape[0] > 0:
                 continue
-            model = self.model_class(model_params_dict=params)
-            model.fit(self.train_df)
-            val_scores = model.evaluate(self.val_df, scores=self.scores)
-            val_scores = {f'val_{k}': v for k, v in val_scores.items()}
-            train_scores = model.evaluate(self.train_df, scores=self.scores)
-            train_scores = {f'train_{k}': v for k, v in train_scores.items()}
+            model = self.model_class(model_params_dict=params, scores=self.scores)
+            model.fit(self.train_df, self.val_df, checkpoint_path=model_checkpoint_path)
+            # get validation loss
+            val_loss = model.get_val_loss()
+            # find best epoch
+            best_epoch = np.argmin(val_loss)
+            # get best train and val scores
+            train_scores = {'train_' + score_name: score[best_epoch] for score_name, score in model.get_train_scores().items()}
+            val_scores = {'val_' + score_name: score[best_epoch] for score_name, score in model.get_val_scores().items()}
             self.results = pd.concat([self.results, pd.DataFrame([{**params, **train_scores, **val_scores}])], ignore_index=True)
             ckpt -= 1
             if self.res_file is not None and ckpt == 0:
