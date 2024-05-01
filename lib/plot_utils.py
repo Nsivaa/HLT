@@ -23,7 +23,7 @@ def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normaliz
 
 def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False):
     confusion_matrix = multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize)
-    fig, ax = plt.subplots(figsize=(10,10))
+    fig, ax = plt.subplots(figsize=(15,10))
     # transform items to percentage
     if normalize:
         confusion_matrix = confusion_matrix * 100
