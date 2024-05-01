@@ -6,3 +6,6 @@
 
 # checkpoint folder
 /checkpoints
+
+# backup files
+*.bak
