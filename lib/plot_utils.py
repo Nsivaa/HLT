@@ -24,6 +24,9 @@ def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normaliz
 def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False):
     confusion_matrix = multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize)
     fig, ax = plt.subplots(figsize=(10,10))
+    # transform items to percentage
+    if normalize:
+        confusion_matrix = confusion_matrix * 100
     sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=label_pred, yticklabels=label_true, cmap='coolwarm')
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
@@ -52,7 +55,7 @@ def plot_threshold_tuning(y_true, y_pred, metric_fun=accuracy_score, metric_para
         print(f'Best threshold: {best_threshold}')
         print(f'Best {metric_name}: {max(scores) if is_maximization else min(scores)}')
 
-def plot_score_barplot(y_true, y_pred, class_names, metric_fun=f1_score, metric_params={'average': None}, metric_name='F1 score'):
+def plot_score_barplot(y_true, y_pred, class_names, metric_fun=f1_score, metric_params={'average': None, 'zero_division':0}, metric_name='F1 score'):
     class_scores = metric_fun(y_true, y_pred, **metric_params)
     plt.figure(figsize=(10,5))
     # rotate x labels

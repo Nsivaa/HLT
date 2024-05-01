@@ -8,88 +8,46 @@ from lib.dataset_utils import *
 from lib.plot_utils import *
 from sklearn.metrics import accuracy_score, jaccard_score, f1_score
 import matplotlib.pyplot as plt
-
-
-'''
-pytorch Roberta model class
-'''
-#TODO cross validation su topologia
-class RobertaClass(torch.nn.Module):
-    def __init__(self, n_classes, frozen_layers=-1):
-        super(RobertaClass, self).__init__()
-        self.l1 = RobertaModel.from_pretrained("roberta-base")
-        if frozen_layers != -1:
-            for param in self.l1.embeddings.parameters():
-                param.requires_grad = False
-            for i in range(frozen_layers):
-                for param in self.l1.encoder.layer[i].parameters():
-                    param.requires_grad = False
-        #self.pre_classifier = torch.nn.Linear(768, 768)#TODO add_module?
-        self.dropout = torch.nn.Dropout(0.1)#TODO 0.3?
-        self.classifier = torch.nn.Linear(768, n_classes)
-
-    def forward(self, input_ids, attention_mask, token_type_ids):
-        output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        hidden_state = output_1[0]#TODO ???
-        pooler = hidden_state[:, 0]
-        #pooler = self.pre_classifier(pooler)
-        #pooler = torch.nn.ReLU()(pooler)#TODO remove?
-        pooler = self.dropout(pooler)
-        output = self.classifier(pooler)
-        return output
-    
-    def get_out_dim(self):
-        return self.classifier.out_features
-    
-'''
-utility function to create parameters for the model
-'''
-def create_model_params(optimizer=torch.optim.Adam,
-                        tokenizer=RobertaTokenizer.from_pretrained('roberta-base', truncation=True, do_lower_case=True),
-                        tokenizer_max_len=None,
-                        batch_size=8,
-                        loss_function=torch.nn.BCEWithLogitsLoss(),
-                        epochs=1,
-                        learning_rate=1e-05,
-                        regularization=0,
-                        val_patience=np.inf,
-                        clip_grad_norm=-1):
-    return {
-        'optimizer': optimizer,
-        'tokenizer': tokenizer,
-        'tokenizer_max_len': tokenizer_max_len,
-        'batch_size': batch_size,
-        'loss_function': loss_function,
-        'epochs': epochs,
-        'learning_rate': learning_rate,
-        'regularization': regularization,
-        'val_patience': val_patience,
-        'clip_grad_norm': clip_grad_norm
-    }
+from abc import ABC, abstractmethod
 
 '''
 interface of pytorch models useful for cross validation and to automate model construction and evaluation
 '''
-class SimpleModelInterface:
+class SimpleModelInterface(ABC):
     def __init__(self, 
-                 model: torch.nn.Module, 
                  scores={},
-                 model_params_dict=create_model_params()):
-        self.model = model
-        self.params = model_params_dict
-        self.optimizer = model_params_dict['optimizer'](params=model.parameters(), lr=model_params_dict['learning_rate'], weight_decay=model_params_dict['regularization'])
+                 model_params_dict={}):
+        self.params = self._create_model_params(model_params_dict)
+        self.model = self._build_model()
+        self.optimizer = self._build_optimizer()
         self.scores = scores
         self.train_scores = {name: [] for name in scores.keys()}
         self.train_loss = []
         self.val_scores = {name: [] for name in scores.keys()}
         self.val_loss = []
         self.device = 'cuda' if cuda.is_available() else 'cpu'
-        model.to(self.device)
+        self.model.to(self.device)
+
+    def get_params(self):
+        return self.params
+
+    # abstract method to build the model parameters
+    @abstractmethod
+    def _create_model_params(self):
+        pass
+
+    # abstract method to build the torch module, useful to cross validate topology
+    @abstractmethod
+    def _build_model(self):
+        pass
+
+    # may be overridden to build a custom optimizer thus avoiding to rely on fixed parameters
+    def _build_optimizer(self):
+        return self.params['optimizer'](params=self.model.parameters(), lr=self.params['learning_rate'], weight_decay=self.params['regularization'])
 
     def _train(self, training_loader, validation_loader=None, save_path=None, progress_bar_epoch=True, progress_bar_step=True):
         self.model.train()
         self.val_scores['loss'] = []
-        #TODO usare confusion matrix?
         cur_patience = self.params['val_patience']
         best_val_loss = np.inf
         for _ in tqdm(range(self.params['epochs']), disable=not progress_bar_epoch):
@@ -199,10 +157,9 @@ class SimpleModelInterface:
             scores['loss'] = loss
         return scores
 
-    def evaluate(self, testing_df, custom_scores=None, progress_bar=False):
+    def evaluate(self, testing_df, scores=None, progress_bar=False):
         testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
-        scores, _ = self._evaluate(testing_loader, custom_scores, progress_bar=progress_bar)
-        return scores
+        return self._evaluate(testing_loader, scores, progress_bar=progress_bar)
 
     def get_train_scores(self):
         return self.train_scores
@@ -215,10 +172,6 @@ class SimpleModelInterface:
     
     def get_val_loss(self):
         return self.val_loss
-    
-    def save_model(self, model_path):
-        torch.save(self.model, model_path)
-
 
 '''
 function to perform statistical testing to compare 2 models using bootstrap
@@ -246,3 +199,66 @@ def bootstrap_test(model1, model2, testing_df, n_tests, sample_size, metric_fun,
     print(f'Successes: {successes}/{n_tests}')
     print(f'p-value: {successes/n_tests}')
     return successes/n_tests
+
+###########################
+# Roberta model
+###########################
+
+'''
+pytorch Roberta module class
+'''
+class RobertaModule(torch.nn.Module):
+    def __init__(self, n_classes, frozen_layers=-1):
+        super(RobertaModule, self).__init__()
+        self.l1 = RobertaModel.from_pretrained("roberta-base")
+        if frozen_layers != -1:
+            for param in self.l1.embeddings.parameters():
+                param.requires_grad = False
+            for i in range(frozen_layers):
+                for param in self.l1.encoder.layer[i].parameters():
+                    param.requires_grad = False
+        #self.pre_classifier = torch.nn.Linear(768, 768)#TODO add_module?
+        self.dropout = torch.nn.Dropout(0.1)#TODO 0.3?
+        self.classifier = torch.nn.Linear(768, n_classes)
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        hidden_state = output_1[0]#TODO ???
+        pooler = hidden_state[:, 0]
+        #pooler = self.pre_classifier(pooler)
+        #pooler = torch.nn.ReLU()(pooler)#TODO remove?
+        pooler = self.dropout(pooler)
+        output = self.classifier(pooler)
+        return output
+    
+    def get_out_dim(self):
+        return self.classifier.out_features
+    
+ROBERTA_DEFAULT_PARAMS = {
+    'optimizer': torch.optim.Adam,
+    'tokenizer': RobertaTokenizer.from_pretrained('roberta-base', truncation=True, do_lower_case=True),
+    'tokenizer_max_len': None,
+    'batch_size': 8,
+    'loss_function': torch.nn.BCEWithLogitsLoss(),
+    'epochs': 1,
+    'learning_rate': 1e-05,
+    'regularization': 0,
+    'val_patience': np.inf,
+    'clip_grad_norm': -1
+}
+
+class Roberta(SimpleModelInterface):
+    def _build_model(self):
+        params = self.get_params()
+        if 'n_classes' not in params:
+            raise ValueError('Number of classes not specified in model parameters')
+        frozen_layers = -1 if 'frozen_layers' not in params else params['frozen_layers']
+        return RobertaModule(params['n_classes'], frozen_layers)
+
+    def _create_model_params(self, params_dict):
+        params = ROBERTA_DEFAULT_PARAMS.copy()
+        params.update(params_dict)
+        return params
+
+    def __init__(self, scores={}, model_params_dict={}):
+        super().__init__(scores, model_params_dict)
