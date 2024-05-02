@@ -20,6 +20,21 @@ TWITTER_DATASET_DIR = DATASET_DIR + 'TwitterDataSplit/'
 GOEMOTIONSCLEAN_DATASET_DIR = DATASET_DIR + 'GoEmotionsCleaned/'
 TWITTERCLEAN_DATASET_DIR = DATASET_DIR + 'TwitterDataCleaned/'
 
+def _or(dataset, array):
+    value = dataset[array.pop(0)]
+    for column in array:
+        value = value | dataset[column]
+    return value 
+
+def map_to_Ekman(dataset):
+    dataset["_joy"] = _or(dataset,  ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"])
+    dataset["_anger"] = _or(dataset, ["anger","annoyance", "disapproval"])
+    dataset["_surprise"] = _or(dataset, ["confusion", "curiosity", "realization", "surprise"])
+    dataset["_sadness"] = _or(dataset, ["disappointment", "embarrassment", "grief", "remorse", "sadness"])
+    dataset["_disgust"] = dataset["disgust"]
+    dataset["_fear"] = _or(dataset, ["fear","nervousness"])
+    dataset["_neutral"] = dataset["neutral"]
+
 def load_goemotions(k_hot_encode=False):
     # Load GoEmotions dataset
     goemotions_train = pd.read_csv(GOEMOTIONS_DATASET_DIR + '/train.tsv', sep='\t', header=None, index_col=False)

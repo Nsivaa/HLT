@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 from tqdm.notebook import tqdm
-from transformers import RobertaModel, RobertaTokenizer
+from transformers import RobertaModel, RobertaTokenizer, BertModel, BertTokenizer
 from torch import cuda
 from lib.dataset_utils import *
 from lib.plot_utils import *
@@ -236,7 +236,7 @@ class RobertaModule(torch.nn.Module):
     
 ROBERTA_DEFAULT_PARAMS = {
     'optimizer': torch.optim.Adam,
-    'tokenizer': RobertaTokenizer.from_pretrained('roberta-base', truncation=True, do_lower_case=True),
+    'tokenizer': RobertaTokenizer.from_pretrained('roberta-base', truncation=True, do_lower_case=False),
     'tokenizer_max_len': None,
     'batch_size': 8,
     'loss_function': torch.nn.BCEWithLogitsLoss(),
@@ -257,6 +257,55 @@ class Roberta(SimpleModelInterface):
 
     def _create_model_params(self, params_dict):
         params = ROBERTA_DEFAULT_PARAMS.copy()
+        params.update(params_dict)
+        return params
+
+    def __init__(self, scores={}, model_params_dict={}):
+        super().__init__(scores, model_params_dict)
+
+###########################
+# Bert model
+###########################
+
+class BertMultiLabelClassifier(torch.nn.Module):
+    def __init__(self, n_classes):
+        super(BertMultiLabelClassifier, self).__init__()
+        self.bert = BertModel.from_pretrained('bert-base-cased')
+        self.dropout = torch.nn.Dropout(0.1)
+        self.classifier = torch.nn.Linear(768,n_classes)
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        pooled_output = outputs.pooler_output
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+        return logits
+    
+    def get_out_dim(self):
+        return self.classifier.out_features
+    
+BERT_DEFAULT_PARAMS = {
+    'optimizer': torch.optim.Adam,
+    'tokenizer': BertTokenizer.from_pretrained('bert-base-cased', truncation=True, do_lower_case=False),
+    'tokenizer_max_len': None,
+    'batch_size': 8,
+    'loss_function': torch.nn.BCEWithLogitsLoss(),
+    'epochs': 1,
+    'learning_rate': 1e-05,
+    'regularization': 0,
+    'val_patience': np.inf,
+    'clip_grad_norm': -1
+}
+
+class Bert(SimpleModelInterface):
+    def _build_model(self):
+        params = self.get_params()
+        if 'n_classes' not in params:
+            raise ValueError('Number of classes not specified in model parameters')
+        return BertMultiLabelClassifier(params['n_classes'])
+
+    def _create_model_params(self, params_dict):
+        params = BERT_DEFAULT_PARAMS.copy()
         params.update(params_dict)
         return params
 
