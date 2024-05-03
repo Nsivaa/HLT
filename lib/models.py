@@ -16,9 +16,12 @@ interface of pytorch models useful for cross validation and to automate model co
 class SimpleModelInterface(ABC):
     def __init__(self, 
                  scores={},
-                 model_params_dict={}):
+                 model_params_dict={},
+                 checkpoint=None):
         self.params = self._create_model_params(model_params_dict)
         self.model = self._build_model()
+        if checkpoint is not None:
+            self.model = torch.load(checkpoint)
         self.optimizer = self._build_optimizer()
         self.scores = scores
         self.train_scores = {name: [] for name in scores.keys()}
