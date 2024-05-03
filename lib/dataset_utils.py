@@ -161,7 +161,6 @@ class EmotionsData(Dataset):
         self.ids = torch.tensor(self.ids, dtype=torch.long)
         self.mask = torch.tensor(self.mask, dtype=torch.long)
         self.token_type_ids = torch.tensor(self.token_type_ids, dtype=torch.long)
-        print(self.targets)
         self.targets = torch.tensor(self.targets, dtype=torch.float)
 
     def __len__(self):

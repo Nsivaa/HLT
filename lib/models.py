@@ -9,6 +9,7 @@ from lib.plot_utils import *
 from sklearn.metrics import accuracy_score, jaccard_score, f1_score
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
+import os
 
 '''
 interface of pytorch models useful for cross validation and to automate model construction and evaluation
@@ -20,7 +21,7 @@ class SimpleModelInterface(ABC):
                  checkpoint=None):
         self.params = self._create_model_params(model_params_dict)
         self.model = self._build_model()
-        if checkpoint is not None:
+        if checkpoint is not None and os.path.exists(checkpoint):
             self.model = torch.load(checkpoint)
         self.optimizer = self._build_optimizer()
         self.scores = scores
