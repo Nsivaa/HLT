@@ -44,6 +44,7 @@ class SimpleModelInterface(ABC):
     def _build_model(self):
         pass
 
+    # TODO: controlalre che per la maxLegth si utilizzi solo training e validation set
     # may be overridden to build a custom optimizer thus avoiding to rely on fixed parameters
     def _build_optimizer(self):
         return self.params['optimizer'](params=self.model.parameters(), lr=self.params['learning_rate'], weight_decay=self.params['regularization'])
@@ -291,7 +292,7 @@ BERT_DEFAULT_PARAMS = {
     'optimizer': torch.optim.Adam,
     'tokenizer': BertTokenizer.from_pretrained('bert-base-cased', truncation=True, do_lower_case=False),
     'tokenizer_max_len': None,
-    'batch_size': 8,
+    'batch_size': 16,
     'loss_function': torch.nn.BCEWithLogitsLoss(),
     'epochs': 1,
     'learning_rate': 1e-05,
