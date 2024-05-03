@@ -264,8 +264,8 @@ class Roberta(SimpleModelInterface):
         params.update(params_dict)
         return params
 
-    def __init__(self, scores={}, model_params_dict={}):
-        super().__init__(scores, model_params_dict)
+    def __init__(self, scores={}, model_params_dict={}, checkpoint=None):
+        super().__init__(scores, model_params_dict, checkpoint=checkpoint)
 
 ###########################
 # Bert model
@@ -313,5 +313,5 @@ class Bert(SimpleModelInterface):
         params.update(params_dict)
         return params
 
-    def __init__(self, scores={}, model_params_dict={}):
-        super().__init__(scores, model_params_dict)
+    def __init__(self, scores={}, model_params_dict={}, checkpoint=None):
+        super().__init__(scores, model_params_dict, checkpoint=checkpoint)
