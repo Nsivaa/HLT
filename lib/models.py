@@ -53,11 +53,11 @@ class SimpleModelInterface(ABC):
     def _build_optimizer(self):
         return self.params['optimizer'](params=self.model.parameters(), lr=self.params['learning_rate'], weight_decay=self.params['regularization'])
 
-    def _train(self, training_loader, validation_loader=None, save_path=None, progress_bar_epoch=True, progress_bar_step=True):
+    def _train(self, training_loader, validation_loader=None, save_path=None, progress_bar_epoch=True, progress_bar_step=True, checkpoint_score='loss', checkpoint_score_maximize=False):
         self.model.train()
         self.val_scores['loss'] = []
         cur_patience = self.params['val_patience']
-        best_val_loss = np.inf
+        best_val_performance = -np.inf if checkpoint_score_maximize else np.inf
         for _ in tqdm(range(self.params['epochs']), disable=not progress_bar_epoch):
             if progress_bar_epoch:
                 print(f'Epoch {_+1}/{self.params["epochs"]}')
@@ -98,8 +98,8 @@ class SimpleModelInterface(ABC):
                 val_scores = self._evaluate(validation_loader, progress_bar=progress_bar_step, compute_loss=True)
                 for name, score in val_scores.items():
                     self.val_scores[name].append(score)
-                if val_scores['loss'] < best_val_loss:
-                    best_val_loss = val_scores['loss']
+                if (val_scores[checkpoint_score] > best_val_performance) == checkpoint_score_maximize:
+                    best_val_performance = val_scores[checkpoint_score]
                     cur_patience = self.params['val_patience']
                     # save model
                     if save_path is not None:
@@ -121,13 +121,12 @@ class SimpleModelInterface(ABC):
             self.model = torch.load(save_path)
             self.model.to(self.device)
 
-    def fit(self, training_df, validation_df=None, progress_bar_epoch=False, progress_bar_step=False, checkpoint_path=None):
+    def fit(self, training_df, validation_df=None, progress_bar_epoch=False, progress_bar_step=False, checkpoint_path=None, checkpoint_score='loss', checkpoint_score_maximize=False):
         training_loader = create_data_loader_from_dataframe(training_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=True)
         validation_loader = None
         if validation_df is not None:
             validation_loader = create_data_loader_from_dataframe(validation_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
-        self._train(training_loader, validation_loader, progress_bar_epoch=progress_bar_epoch, progress_bar_step=progress_bar_step, save_path=checkpoint_path)
-
+        self._train(training_loader, validation_loader, progress_bar_epoch=progress_bar_epoch, progress_bar_step=progress_bar_step, save_path=checkpoint_path, checkpoint_score=checkpoint_score, checkpoint_score_maximize=checkpoint_score_maximize)
     def _predict(self, data_loader, accumulate_targets=False, progress_bar=True, accumulate_loss=False):
         self.model.eval()
         # initialize target and prediction matrices
