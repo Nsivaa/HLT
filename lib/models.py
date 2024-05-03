@@ -32,6 +32,9 @@ class SimpleModelInterface(ABC):
         self.device = 'cuda' if cuda.is_available() else 'cpu'
         self.model.to(self.device)
 
+    def save_model(self, path):
+        torch.save(self.model, path)
+
     def get_params(self):
         return self.params
 
