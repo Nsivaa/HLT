@@ -27,7 +27,7 @@ def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, no
     # transform items to percentage
     if normalize:
         confusion_matrix = confusion_matrix * 100
-    sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=label_pred, yticklabels=label_true, cmap='coolwarm')
+    sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=label_pred, yticklabels=label_true, cmap='coolwarm', fmt='.0f')
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
     plt.show()
