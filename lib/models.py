@@ -121,12 +121,13 @@ class SimpleModelInterface(ABC):
             self.model = torch.load(save_path)
             self.model.to(self.device)
 
-    def fit(self, training_df, validation_df=None, progress_bar_epoch=False, progress_bar_step=False, checkpoint_path=None, checkpoint_score='loss', checkpoint_score_maximize=False):
-        training_loader = create_data_loader_from_dataframe(training_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=True)
+    def fit(self, training_df, validation_df=None, progress_bar_epoch=False, progress_bar_step=False, checkpoint_path=None, checkpoint_score='loss', checkpoint_score_maximize=False, shuffle_training=True):
+        training_loader = create_data_loader_from_dataframe(training_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=shuffle_training)
         validation_loader = None
         if validation_df is not None:
             validation_loader = create_data_loader_from_dataframe(validation_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
         self._train(training_loader, validation_loader, progress_bar_epoch=progress_bar_epoch, progress_bar_step=progress_bar_step, save_path=checkpoint_path, checkpoint_score=checkpoint_score, checkpoint_score_maximize=checkpoint_score_maximize)
+
     def _predict(self, data_loader, accumulate_targets=False, progress_bar=True, accumulate_loss=False):
         self.model.eval()
         # initialize target and prediction matrices

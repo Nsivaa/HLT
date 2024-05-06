@@ -43,7 +43,8 @@ GOEMOTIONS_TWITTER_MAPPING = {
     "twitter_neutral": ["neutral"]
 }
 def _or(dataset, array):
-    value = dataset[array.pop(0)]
+    # inizialize zeros
+    value = pd.Series([0]*len(dataset))
     for column in array:
         value = value | dataset[column]
     return value 
