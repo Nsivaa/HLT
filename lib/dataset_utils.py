@@ -42,9 +42,9 @@ GOEMOTIONS_TWITTER_MAPPING = {
     "twitter_fear": ["fear","nervousness"]
 }
 def _or(dataset, array):
-    value = dataset[array[0]]
-    for column in range(1,len(array)):
-        value = value | dataset[array[column]]
+    value = pd.Series([0]*len(dataset))
+    for column in array:
+        value = value | dataset[column]
     return value 
 
 def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING):
