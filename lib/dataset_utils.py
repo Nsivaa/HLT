@@ -39,26 +39,27 @@ GOEMOTIONS_TWITTER_MAPPING = {
     "twitter_surprise": ["confusion", "curiosity", "realization", "surprise"],
     "twitter_sadness": ["disappointment", "embarrassment", "grief", "remorse", "sadness"],
     "twitter_love": ["love", "caring"],
-    "twitter_fear": ["fear","nervousness"],
-    "twitter_neutral": ["neutral"]
+    "twitter_fear": ["fear","nervousness"]
 }
 def _or(dataset, array):
-    # inizialize zeros
     value = pd.Series([0]*len(dataset))
     for column in array:
         value = value | dataset[column]
     return value 
 
 def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING):
-    for ekman, goemotion in mapping.items():
-        dataset[ekman] = _or(dataset, goemotion)
+    for twitter, goemotion in mapping.items():
+        dataset[twitter] = _or(dataset, goemotion)
     if drop_original:
         # drop goemotion columns
         # get union of emotion lists
-        all_emotions = []
+        all_emotions = ["neutral"]
         for emotions in mapping.values():
             all_emotions += emotions
+        
         dataset.drop(columns=all_emotions, inplace=True)
+        #we must drop every entry whose only label was neural
+        dataset=dataset.loc[dataset.drop(columns=["text"]).sum(axis=1) > 0]
     return dataset
 
 #TODO
