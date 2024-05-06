@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 from sklearn.preprocessing import MultiLabelBinarizer
 import json
-from warnings import deprecated
+from deprecated import deprecated
 
 # enum of datasets
 class DatasetEnum(Enum):
@@ -61,7 +61,7 @@ def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOT
     return dataset
 
 #TODO
-@deprecated("Use goemotions_apply_emotion_mapping instead")
+@deprecated(reason="Use goemotions_apply_emotion_mapping instead")
 def map_to_Ekman(dataset):
     dataset["_joy"] = _or(dataset,  ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"])
     dataset["_anger"] = _or(dataset, ["anger","annoyance", "disapproval"])
