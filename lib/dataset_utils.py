@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 from sklearn.preprocessing import MultiLabelBinarizer
 import json
+from warnings import deprecated
 
 # enum of datasets
 class DatasetEnum(Enum):
@@ -20,12 +21,47 @@ TWITTER_DATASET_DIR = DATASET_DIR + 'TwitterDataSplit/'
 GOEMOTIONSCLEAN_DATASET_DIR = DATASET_DIR + 'GoEmotionsCleaned/'
 TWITTERCLEAN_DATASET_DIR = DATASET_DIR + 'TwitterDataCleaned/'
 
+GOEMOTIONS_EKMAN_MAPPING = {
+    "ekman_joy": ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"],
+    "ekman_anger": ["anger","annoyance", "disapproval"],
+    "ekman_surprise": ["confusion", "curiosity", "realization", "surprise"],
+    "ekman_sadness": ["disappointment", "embarrassment", "grief", "remorse", "sadness"],
+    "ekman_disgust": ["disgust"],
+    "ekman_fear": ["fear","nervousness"],
+    "ekman_neutral": ["neutral"]
+}
+
+#TODO check
+# twitter has different labels: joy, sadness, anger, surprise, fear, love
+GOEMOTIONS_TWITTER_MAPPING = {
+    "twitter_joy": ["admiration", "amusement", "approval","desire", "excitement", "gratitude", "joy", "optimism", "pride", "relief"],
+    "twitter_anger": ["anger","annoyance", "disapproval", "disgust"],
+    "twitter_surprise": ["confusion", "curiosity", "realization", "surprise"],
+    "twitter_sadness": ["disappointment", "embarrassment", "grief", "remorse", "sadness"],
+    "twitter_love": ["love", "caring"],
+    "twitter_fear": ["fear","nervousness"],
+    "twitter_neutral": ["neutral"]
+}
 def _or(dataset, array):
     value = dataset[array.pop(0)]
     for column in array:
         value = value | dataset[column]
     return value 
 
+def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING):
+    for ekman, goemotion in mapping.items():
+        dataset[ekman] = _or(dataset, goemotion)
+    if drop_original:
+        # drop goemotion columns
+        # get union of emotion lists
+        all_emotions = []
+        for emotions in mapping.values():
+            all_emotions += emotions
+        dataset.drop(columns=all_emotions, inplace=True)
+    return dataset
+
+#TODO
+@deprecated("Use goemotions_apply_emotion_mapping instead")
 def map_to_Ekman(dataset):
     dataset["_joy"] = _or(dataset,  ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"])
     dataset["_anger"] = _or(dataset, ["anger","annoyance", "disapproval"])
@@ -34,6 +70,7 @@ def map_to_Ekman(dataset):
     dataset["_disgust"] = dataset["disgust"]
     dataset["_fear"] = _or(dataset, ["fear","nervousness"])
     dataset["_neutral"] = dataset["neutral"]
+
 
 def load_goemotions(k_hot_encode=False):
     # Load GoEmotions dataset
