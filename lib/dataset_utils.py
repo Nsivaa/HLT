@@ -21,6 +21,13 @@ TWITTER_DATASET_DIR = DATASET_DIR + 'TwitterDataSplit/'
 GOEMOTIONSCLEAN_DATASET_DIR = DATASET_DIR + 'GoEmotionsCleaned/'
 TWITTERCLEAN_DATASET_DIR = DATASET_DIR + 'TwitterDataCleaned/'
 
+GOEMOTIONS_LABELS = ['admiration', 'amusement', 'disapproval', 'disgust',
+       'embarrassment', 'excitement', 'fear', 'gratitude', 'grief', 'joy',
+       'love', 'nervousness', 'anger', 'optimism', 'pride', 'realization',
+       'relief', 'remorse', 'sadness', 'surprise', 'neutral', 'annoyance',
+       'approval', 'caring', 'confusion', 'curiosity', 'desire',
+       'disappointment']
+
 GOEMOTIONS_EKMAN_MAPPING = {
     "ekman_joy": ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"],
     "ekman_anger": ["anger","annoyance", "disapproval"],
@@ -47,7 +54,10 @@ def _or(dataset, array):
         value = value | dataset[column]
     return value 
 
-def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING):
+def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING,isDataframe=True):
+    # dataframe == false => we want to map the values of a tensor so we change it into a dataframe first
+    if not(isDataframe):
+        dataset = pd.DataFrame(dataset,columns=GOEMOTIONS_LABELS)
     for twitter, goemotion in mapping.items():
         dataset[twitter] = _or(dataset, goemotion)
     if drop_original:
@@ -59,8 +69,16 @@ def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOT
         
         dataset.drop(columns=all_emotions, inplace=True)
         #we must drop every entry whose only label was neural
-        dataset=dataset.loc[dataset.drop(columns=["text"]).sum(axis=1) > 0]
-    return dataset
+        if isDataframe:
+            dataset=dataset.loc[dataset.drop(columns=["text"]).sum(axis=1) > 0]
+            return dataset
+        # nel caso in cui dataset sia un tensore, non occorre droppare la colonna "text", inoltre dato che il .predict sarà fatto nel caso post-mapped
+        # su un dataset di test già con 6 emozioni (e colonna "neutral rimossa"). Quindi se a seguito della fit il modello predicta una riga con emozione neutrale
+        # che sarà per forza di cose a seguito del mapping un falso positivo (dato che non esisterà più il label "neutral"), la predic va trattata come sbagliata e non rimossa 
+        else:
+             
+             return dataset.values
+    
 
 #TODO
 @deprecated(reason="Use goemotions_apply_emotion_mapping instead")
