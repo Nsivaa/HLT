@@ -41,6 +41,9 @@ GOEMOTIONS_TWITTER_MAPPING = {
     "twitter_love": ["love", "caring"],
     "twitter_fear": ["fear","nervousness"]
 }
+
+GOEMOTIONS_EMOTIONS = ["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise", "neutral"]
+
 def _or(dataset, array):
     value = pd.Series([0]*len(dataset))
     for column in array:
@@ -52,17 +55,12 @@ def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOT
         dataset[twitter] = _or(dataset, goemotion)
     if drop_original:
         # drop goemotion columns
-        # get union of emotion lists
-        all_emotions = ["neutral"]
-        for emotions in mapping.values():
-            all_emotions += emotions
-        
-        dataset.drop(columns=all_emotions, inplace=True)
+        dataset = dataset.drop(columns=GOEMOTIONS_EMOTIONS)
         #we must drop every entry whose only label was neural
-        dataset=dataset.loc[dataset.drop(columns=["text"]).sum(axis=1) > 0]
+        dataset=dataset.loc[dataset[mapping.keys()].sum(axis=1) > 0]
     return dataset
 
-#TODO
+#TODO remove
 @deprecated(reason="Use goemotions_apply_emotion_mapping instead")
 def map_to_Ekman(dataset):
     dataset["_joy"] = _or(dataset,  ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"])
@@ -191,7 +189,7 @@ class EmotionsData(Dataset):
                 add_special_tokens=True,
                 max_length=self.max_len,
                 truncation=self.truncation,
-                padding='max_length',
+                padding='max_length' if max_len is not None else 'longest',
                 return_token_type_ids=True
             )
             self.ids.append(inputs['input_ids'])
