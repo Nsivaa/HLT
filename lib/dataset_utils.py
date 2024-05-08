@@ -263,3 +263,15 @@ def equal_sample(df, label_cols, sample_size, replace=False):
         samples.append(df[df[label] == 1].sample(sample_size, replace=replace))
     samples_df = pd.concat(samples)
     return samples_df
+
+# separate class because no tokenization is needed
+class Llama_EmotionsData(Dataset):
+    def __init__(self, dataframe) -> None:
+        self.text = dataframe['text']
+        self.targets = dataframe.drop(columns=['text']).to_numpy()
+
+    def __len__(self):
+        return len(self.text)
+
+    def __getitem__(self, index):
+        return self.text[index], self.targets[index]
