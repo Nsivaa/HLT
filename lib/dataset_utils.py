@@ -21,6 +21,13 @@ TWITTER_DATASET_DIR = DATASET_DIR + 'TwitterDataSplit/'
 GOEMOTIONSCLEAN_DATASET_DIR = DATASET_DIR + 'GoEmotionsCleaned/'
 TWITTERCLEAN_DATASET_DIR = DATASET_DIR + 'TwitterDataCleaned/'
 
+GOEMOTIONS_LABELS = ['admiration', 'amusement', 'disapproval', 'disgust',
+       'embarrassment', 'excitement', 'fear', 'gratitude', 'grief', 'joy',
+       'love', 'nervousness', 'anger', 'optimism', 'pride', 'realization',
+       'relief', 'remorse', 'sadness', 'surprise', 'neutral', 'annoyance',
+       'approval', 'caring', 'confusion', 'curiosity', 'desire',
+       'disappointment']
+
 GOEMOTIONS_EKMAN_MAPPING = {
     "ekman_joy": ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"],
     "ekman_anger": ["anger","annoyance", "disapproval"],
@@ -50,14 +57,24 @@ def _or(dataset, array):
         value = value | dataset[column]
     return value 
 
-def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING):
+#TODO cambiare nome parametro isDataframe?, .values?????
+def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING,isDataframe=True):
+    # dataframe == false => we want to map the values of a tensor so we change it into a dataframe first
+    if not(isDataframe):
+        dataset = pd.DataFrame(dataset,columns=GOEMOTIONS_LABELS)
     for twitter, goemotion in mapping.items():
         dataset[twitter] = _or(dataset, goemotion)
     if drop_original:
         # drop goemotion columns
         dataset = dataset.drop(columns=GOEMOTIONS_EMOTIONS)
         #we must drop every entry whose only label was neural
-        dataset=dataset.loc[dataset[mapping.keys()].sum(axis=1) > 0]
+        if isDataframe:
+            dataset = dataset.loc[dataset[mapping.keys()].sum(axis=1) > 0]
+        else:
+            # Il .predict sarà fatto nel caso post-mapped su un dataset di test già con 6 emozioni (e colonna "neutral rimossa").
+            # Quindi se a seguito della fit il modello predicta una riga con emozione neutrale che sarà per forza di cose a seguito del mapping un falso positivo
+            # (dato che non esisterà più il label "neutral"), la predic va trattata come sbagliata e non rimossa 
+            dataset = dataset.values
     return dataset
 
 #TODO remove
@@ -243,3 +260,15 @@ def equal_sample(df, label_cols, sample_size, replace=False):
         samples.append(df[df[label] == 1].sample(sample_size, replace=replace))
     samples_df = pd.concat(samples)
     return samples_df
+
+# separate class because no tokenization is needed
+class Llama_EmotionsData(Dataset):
+    def __init__(self, dataframe) -> None:
+        self.text = dataframe['text']
+        self.targets = dataframe.drop(columns=['text']).to_numpy()
+
+    def __len__(self):
+        return len(self.text)
+
+    def __getitem__(self, index):
+        return self.text[index], self.targets[index]
