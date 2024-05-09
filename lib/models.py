@@ -3,10 +3,12 @@ import numpy as np
 import torch
 from tqdm.notebook import tqdm
 from transformers import RobertaModel, RobertaTokenizer, BertModel, BertTokenizer
+from llama_index.llms.ollama import Ollama
 from torch import cuda
 from lib.dataset_utils import *
 from lib.plot_utils import *
-from sklearn.metrics import accuracy_score, jaccard_score, f1_score
+from sklearn.metrics import accuracy_score, jaccard_score, f1_score, classification_report
+from sklearn.preprocessing import LabelBinarizer, MultiLabelBinarizer
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 import os
@@ -319,3 +321,103 @@ class Bert(SimpleModelInterface):
 
     def __init__(self, scores={}, model_params_dict={}, checkpoint=None):
         super().__init__(scores, model_params_dict, checkpoint=checkpoint)
+
+###########################
+# Llama model
+###########################
+
+class Llama3():
+    def __init__(self, name, timeout = 1000.0, scores={}, prompts={}, samples = None, json_mode =True):
+        # samples : samples to show in prompt (to be taken from training data?), for now are hardcoded
+
+        self.model = Ollama(model=name, request_timeout=timeout, json_mode = json_mode)
+        self.scores = scores
+        self.prompts = prompts
+        self.samples = samples
+
+    def predict(self, emotions, test,  batch_dim = 8, single_label = True, progress_bar = False):
+        # emotions : emotions to classify
+        # test : test data to classify
+        test_loader = DataLoader(test, batch_size = batch_dim, shuffle = False)
+        predictions = []
+        base_prompt = self.generate_base_prompt(emotions, single_label) # to avoid recreating the prompt from scratch at every batch
+        for data in tqdm(test_loader, disable=not progress_bar):
+            batch_prompt = self.add_test_data_to_prompt(base_prompt, data[0])
+            predictions.append(self.classify_batch(batch_prompt, emotions, batch_dim))
+        predictions = self.flatten(predictions)
+        if len(predictions) != len(test):
+            print(f"Predictions and test data do not match: pred: {len(predictions)} vs test:{len(test)}")
+
+        results = self.evaluate(test.targets, predictions, self.scores, emotions)
+        print(results)
+        return predictions, results
+
+    def generate_base_prompt(self, emotions, single_label = True):
+        prompt = ""
+        if single_label:
+            prompt = self.prompts["SINGLE_BASE_PROMPT"] + str(emotions) 
+        else:
+            prompt = self.prompts["MULTI_BASE_PROMPT"] + str(emotions) 
+        if self.samples:
+            prompt += self.prompts["SAMPLES_STRING"] + self.samples 
+        return prompt + self.prompts["TERMINATOR_STRING"]
+                
+    def add_test_data_to_prompt(self, prompt, test):
+        # appends data to classify to base prompt
+        for index, row in enumerate(test):
+            prompt += (str(index) + '. ' + row + '\n')
+        prompt += self.prompts["TERMINATOR_STRING"]
+        return prompt
+
+    def classify_batch(self, prompt, emotions, batch_dim):
+        # classify batch of data
+        # response is formatted as JSON
+        response = self.model.complete(prompt).text
+        predictions = self.extract_emotions(response, emotions, batch_dim)
+        return list(predictions.values())
+    
+    def evaluate(self, targets, predictions, scores, emotions, single_label = True):
+        # evaluate the model
+        # TODO: study on 'other' response? 
+        if single_label:
+            lb = LabelBinarizer()
+        else:
+            lb = MultiLabelBinarizer()
+        bin_predictions = lb.fit_transform(predictions)
+        bin_predictions = pd.DataFrame(bin_predictions, columns = lb.classes_) 
+        if 'other' in bin_predictions.columns:
+            bin_predictions.drop(columns=['other'], inplace=True) # 'other' if emotion not in the allowed ones
+        scores = {name: score(targets, bin_predictions) for name, score in scores.items()}
+        plot_score_barplot(targets, bin_predictions, emotions)
+        print(classification_report(targets, bin_predictions, target_names=emotions))
+        if not single_label:
+            plot_multilabel_confusion_heatmap(targets, bin_predictions, emotions)
+        return scores
+
+    def clean_response(self, response):
+        response = response[response.find('{'):] # skips occasional text before JSON
+        result = ""
+        for line in response.splitlines():
+            head, sep, _ = line.partition(',') # removes occasional "comments" model sometimes adds
+            result += head + sep + '\n'
+        return result 
+    
+    def extract_emotions(self, answers, emotions, batch_dim):
+        # extracts emotions from JSON response 
+        answers = self.clean_response(answers)
+        try:
+            answers_dict = json.loads(answers)
+        except json.JSONDecodeError:
+            print(answers)
+
+        if len(answers_dict) != batch_dim:
+            # pad 
+            answers_dict.update({i: 'other' for i in range(batch_dim-len(answers_dict))})
+        for key, value in answers_dict.items():
+            if value not in emotions:
+                answers_dict.update({key : 'other'})
+        return answers_dict
+    
+    def flatten(xss):
+    # flattens list of lists into a single list
+        return [x for xs in xss for x in xs]

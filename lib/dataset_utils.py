@@ -47,12 +47,16 @@ GOEMOTIONS_TWITTER_MAPPING = {
     "twitter_love": ["love", "caring"],
     "twitter_fear": ["fear","nervousness"]
 }
+
+GOEMOTIONS_EMOTIONS = ["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise", "neutral"]
+
 def _or(dataset, array):
     value = pd.Series([0]*len(dataset))
     for column in array:
         value = value | dataset[column]
     return value 
 
+#TODO cambiare nome parametro isDataframe?, .values?????
 def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_EKMAN_MAPPING,isDataframe=True):
     # dataframe == false => we want to map the values of a tensor so we change it into a dataframe first
     if not(isDataframe):
@@ -61,25 +65,18 @@ def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOT
         dataset[twitter] = _or(dataset, goemotion)
     if drop_original:
         # drop goemotion columns
-        # get union of emotion lists
-        all_emotions = ["neutral"]
-        for emotions in mapping.values():
-            all_emotions += emotions
-        
-        dataset.drop(columns=all_emotions, inplace=True)
+        dataset = dataset.drop(columns=GOEMOTIONS_EMOTIONS)
         #we must drop every entry whose only label was neural
         if isDataframe:
-            dataset=dataset.loc[dataset.drop(columns=["text"]).sum(axis=1) > 0]
-            return dataset
-        # nel caso in cui dataset sia un tensore, non occorre droppare la colonna "text", inoltre dato che il .predict sarà fatto nel caso post-mapped
-        # su un dataset di test già con 6 emozioni (e colonna "neutral rimossa"). Quindi se a seguito della fit il modello predicta una riga con emozione neutrale
-        # che sarà per forza di cose a seguito del mapping un falso positivo (dato che non esisterà più il label "neutral"), la predic va trattata come sbagliata e non rimossa 
+            dataset = dataset.loc[dataset[mapping.keys()].sum(axis=1) > 0]
         else:
-             
-             return dataset.values
-    
+            # Il .predict sarà fatto nel caso post-mapped su un dataset di test già con 6 emozioni (e colonna "neutral rimossa").
+            # Quindi se a seguito della fit il modello predicta una riga con emozione neutrale che sarà per forza di cose a seguito del mapping un falso positivo
+            # (dato che non esisterà più il label "neutral"), la predic va trattata come sbagliata e non rimossa 
+            dataset = dataset.values
+    return dataset
 
-#TODO
+#TODO remove
 @deprecated(reason="Use goemotions_apply_emotion_mapping instead")
 def map_to_Ekman(dataset):
     dataset["_joy"] = _or(dataset,  ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"])
@@ -208,7 +205,7 @@ class EmotionsData(Dataset):
                 add_special_tokens=True,
                 max_length=self.max_len,
                 truncation=self.truncation,
-                padding='max_length',
+                padding='max_length' if max_len is not None else 'longest',
                 return_token_type_ids=True
             )
             self.ids.append(inputs['input_ids'])
@@ -262,3 +259,15 @@ def equal_sample(df, label_cols, sample_size, replace=False):
         samples.append(df[df[label] == 1].sample(sample_size, replace=replace))
     samples_df = pd.concat(samples)
     return samples_df
+
+# separate class because no tokenization is needed
+class Llama_EmotionsData(Dataset):
+    def __init__(self, dataframe) -> None:
+        self.text = dataframe['text']
+        self.targets = dataframe.drop(columns=['text']).to_numpy()
+
+    def __len__(self):
+        return len(self.text)
+
+    def __getitem__(self, index):
+        return self.text[index], self.targets[index]
