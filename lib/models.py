@@ -341,47 +341,51 @@ class Llama3():
         self.samples = shots
         self.prompts = prompts
 
-    def multi_predict(self, test, progress_bar = False):
-        predictions = []
-        for entry in tqdm(test, disable=not progress_bar):
-            predictions.append(self.multi_classify(entry))
-        predictions = self.flatten(predictions)
-        if len(predictions) != len(test):
-            print(f"Predictions and test data do not match: pred: {len(predictions)} vs test:{len(test)}")
+    
+    def classify(self, data : Llama_EmotionsData, progress_bar = False):
+        # data : test data to classify
 
-        results = self.evaluate(test.targets, predictions)
+        if self.mode == "single":
+            predictions = self.single_predict(data, progress_bar = progress_bar)
+        else:
+            predictions = self.multi_predict(data, progress_bar = progress_bar)
 
-    def predict(self, test, progress_bar = False):
+        self.evaluate(data.targets, predictions)
+
+    def single_predict(self, data, progress_bar = False):
         # emotions : emotions to classify
         # test : test data to classify
         predictions = []
-        print(len(test))
+        prompt = ""
+        if self.samples:
+            prompt += f"""Look at these examples: \n {self.samples} \n Now""" 
         try:
-            for entry in tqdm(test, disable=not progress_bar):
-                #prompt = self.generate_prompt(entry) 
+            for entry in tqdm(data, disable=not progress_bar):
                 prompt = f"""Classify the following sentence:\n {entry} \nChoose among the following emotions: {self.emotions}"""
                 predictions.append(self.generator(prompt))
-            if len(predictions) != len(test):
-                print(f"Predictions and test data do not match: pred: {len(predictions)} vs test:{len(test)}")
-        except (ValueError, KeyError):
+
+        except (ValueError, KeyError): # loop gives error at index of last entry (???)
             pass
 
-        results = self.evaluate(test.targets, predictions)
-        return results
+        return predictions
     
-    def multi_classify(self, prompt):
-        # classify multiple emotions
-        # iterates over all emotions and asks them one by one
-        answers = []
-        for emotion in self.emotions:
+    def multi_predict(self, data, progress_bar = False):
+        predictions = []
+        try:
+            for entry in tqdm(data, disable=not progress_bar):
+                sentence_emotions = []
+
+                for emotion in self.emotions:
+                    prompt = f"""Consider the following sentence:\n {entry} \nDoes it evoke the emotion '{emotion}'? Answer with 'True' or 'False'."""
+                    response = self.generator(prompt)
+                    if response == "True":
+                        sentence_emotions.append(emotion)
+                    predictions.append(sentence_emotions)
+
+        except (ValueError, KeyError): # loop gives error at index of last entry (???) 
             pass
-        
-    def generate_prompt(self, entry):
-        # TODO: ADD SHOTS
-        if self.mode == "single":
-            return self.prompts["SINGLE_BASE_PROMPT"] + str(self.choices) + self.prompts["SINGLE_END_PROMPT"]
-        else:
-            return self.prompts["MULTI_BASE_PROMPT"] + str(self.choices) + self.prompts["MULTI_END_PROMPT"]
+
+        return predictions
     
     def evaluate(self, targets, predictions):
         # evaluate the model
