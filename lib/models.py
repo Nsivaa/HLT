@@ -355,13 +355,16 @@ class Llama3():
         # emotions : emotions to classify
         # test : test data to classify
         predictions = []
-        for entry in tqdm(test, disable=not progress_bar):
-            #prompt = self.generate_prompt(entry) 
-            prompt = f"""Classify the following sentence:\n {entry} \nChoose among the following emotions: {self.emotions}"""
-            predictions.append(self.generator(prompt))
-        predictions = self.flatten(predictions)
-        if len(predictions) != len(test):
-            print(f"Predictions and test data do not match: pred: {len(predictions)} vs test:{len(test)}")
+        print(len(test))
+        try:
+            for entry in tqdm(test, disable=not progress_bar):
+                #prompt = self.generate_prompt(entry) 
+                prompt = f"""Classify the following sentence:\n {entry} \nChoose among the following emotions: {self.emotions}"""
+                predictions.append(self.generator(prompt))
+            if len(predictions) != len(test):
+                print(f"Predictions and test data do not match: pred: {len(predictions)} vs test:{len(test)}")
+        except (ValueError, KeyError):
+            pass
 
         results = self.evaluate(test.targets, predictions)
         return results
@@ -389,6 +392,8 @@ class Llama3():
             lb = MultiLabelBinarizer()
         bin_predictions = lb.fit_transform(predictions)
         bin_predictions = pd.DataFrame(bin_predictions, columns = lb.classes_) 
+        csv_name = self.mode + "_predictions.csv"
+        bin_predictions.to_csv(csv_name)
         scores = {name: score(targets, bin_predictions) for name, score in self.scores.items()}
         plot_score_barplot(targets, bin_predictions, self.emotions)
         print(classification_report(targets, bin_predictions, target_names=self.emotions))
