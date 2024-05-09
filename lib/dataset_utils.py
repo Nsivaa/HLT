@@ -34,8 +34,7 @@ GOEMOTIONS_EKMAN_MAPPING = {
     "ekman_surprise": ["confusion", "curiosity", "realization", "surprise"],
     "ekman_sadness": ["disappointment", "embarrassment", "grief", "remorse", "sadness"],
     "ekman_disgust": ["disgust"],
-    "ekman_fear": ["fear","nervousness"],
-    "ekman_neutral": ["neutral"]
+    "ekman_fear": ["fear","nervousness"]
 }
 
 #TODO check
@@ -54,7 +53,7 @@ def _or(dataset, array):
         value = value | dataset[column]
     return value 
 
-def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_TWITTER_MAPPING,isDataframe=True):
+def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_EKMAN_MAPPING,isDataframe=True):
     # dataframe == false => we want to map the values of a tensor so we change it into a dataframe first
     if not(isDataframe):
         dataset = pd.DataFrame(dataset,columns=GOEMOTIONS_LABELS)
