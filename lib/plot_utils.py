@@ -2,7 +2,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score, classification_report
-from lib.scores import membership_score
+from lib.scores import membership_score, tune_sigmoid_threshold
 
 # create confusion matrix of multilabel classification
 def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize=False):
@@ -32,15 +32,6 @@ def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, no
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
     plt.show()
-
-def tune_sigmoid_threshold(y_true, y_pred, metric_fun=accuracy_score, metric_params={}, is_maximization=True, return_only_best=True):
-    thresholds = np.arange(0, 1, 0.01)
-    scores = [metric_fun(y_true, y_pred > t, **metric_params) for t in thresholds]
-    best_id = np.argmax(scores) if is_maximization else np.argmin(scores)
-    best_threshold = thresholds[best_id]
-    if return_only_best:
-        scores = scores[best_id]
-    return best_threshold, scores
 
 def plot_threshold_tuning(y_true, y_pred, metric_fun=accuracy_score, metric_params={}, plot=False, is_maximization=True, metric_name='Accuracy'):
     best_threshold, scores = tune_sigmoid_threshold(y_true, y_pred, metric_fun, metric_params, is_maximization, return_only_best=False)
