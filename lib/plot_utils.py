@@ -1,7 +1,8 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, jaccard_score, classification_report
+from lib.scores import membership_score
 
 # create confusion matrix of multilabel classification
 def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize=False):
@@ -64,3 +65,55 @@ def plot_score_barplot(y_true, y_pred, class_names, metric_fun=f1_score, metric_
     plt.xlabel('Class')
     plt.ylabel(metric_name)
     plt.title(f'{metric_name} for each class')
+
+def plot_learning_curves(tr_loss, val_loss, score_name = 'loss'):
+    plt.plot(tr_loss, label='train')
+    plt.plot(val_loss, label='validation', color='orange', linestyle='--')
+    plt.xlabel('epoch')
+    plt.ylabel(score_name)
+    plt.legend()
+    plt.title(f'{score_name} over epochs')
+    plt.show()
+
+def model_analysis(model, val_df, target_cols, test_df=None):
+    # plot learning curves
+    tr_scores, val_scores = model.get_train_scores(), model.get_val_scores()
+    tr_loss, val_loss = model.get_train_loss(), model.get_val_loss()
+    plot_learning_curves(tr_loss, val_loss)
+    plot_learning_curves(tr_scores['f1_macro'], val_scores['f1_macro'], 'Macro F1')
+    # get predictions on validation set
+    out = model.predict(val_df)
+    target = val_df[target_cols].values
+    # plot threshold tuning
+    plot_threshold_tuning(target, out, plot=True)
+    plot_threshold_tuning(target, out, plot=True, metric_params={'average':'micro', 'zero_division':0}, metric_fun=f1_score, metric_name='F1 Score')
+    plot_threshold_tuning(target, out, plot=True, metric_params={'average':'macro', 'zero_division':0}, metric_fun=f1_score, metric_name='F1 Score')
+    # get best threshold
+    thresh, _ = tune_sigmoid_threshold(target, out, metric_params={'average':'macro', 'zero_division':0}, metric_fun=f1_score)
+    # plot the confusion matrix for the best threshold
+    best_out = (out > thresh).astype(int)
+    plot_multilabel_confusion_heatmap(target, best_out, label_true=target_cols, label_pred=target_cols, normalize=True)
+    # bar plot over classes
+    plot_score_barplot(target, best_out, target_cols)
+    # print classification report
+    print(classification_report(target, best_out, target_names=target_cols))
+    # print additional metrics
+    print('Jaccard Samples Score:', jaccard_score(target, best_out, zero_division=0, average='samples'))
+    print('Jaccard Macro Score:', jaccard_score(target, best_out, zero_division=0, average='macro'))
+    print('Membership Score:', membership_score(target, out))
+    if test_df is not None:
+        # print results on test set using threshold from validation set
+        # get predictions on test set
+        out = model.predict(test_df)
+        target = test_df[target_cols].values
+        # plot the confusion matrix for the best threshold
+        best_out = (out > thresh).astype(int)
+        plot_multilabel_confusion_heatmap(target, best_out, label_true=target_cols, label_pred=target_cols, normalize=True)
+        # bar plot over classes
+        plot_score_barplot(target, best_out, target_cols)
+        # print classification report
+        print(classification_report(target, best_out, target_names=target_cols))
+        # print additional metrics
+        print('Jaccard Samples Score:', jaccard_score(target, best_out, zero_division=0, average='samples'))
+        print('Jaccard Macro Score:', jaccard_score(target, best_out, zero_division=0, average='macro'))
+        print('Membership Score:', membership_score(target, out))
