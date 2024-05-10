@@ -105,6 +105,9 @@ class SimpleModelInterface(ABC):
                     cur_patience = self.params['val_patience']
                     # save model
                     if save_path is not None:
+                        dir_path = os.path.dirname(save_path)
+                        if not os.path.exists(dir_path):
+                            os.makedirs(dir_path)
                         torch.save(self.model, save_path)
                 else:
                     cur_patience -= 1

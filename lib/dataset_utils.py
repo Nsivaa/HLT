@@ -193,27 +193,20 @@ class EmotionsData(Dataset):
             self.max_len = max_len
         self.nclasses = len(self.targets[0])
         self.truncation = truncation
+        # normalize whitespace
+        self.text = self.text.apply(lambda x: " ".join(str(x).split())).tolist()
         # tokenize text
-        for i, text in enumerate(self.text):
-            # normalize whitespace
-            text = str(text)
-            text = " ".join(text.split())
-
-            inputs = self.tokenizer.encode_plus(
-                text,
-                None,
-                add_special_tokens=True,
-                max_length=self.max_len,
-                truncation=self.truncation,
-                padding='max_length' if max_len is not None else 'longest',
-                return_token_type_ids=True
-            )
-            self.ids.append(inputs['input_ids'])
-            self.mask.append(inputs['attention_mask'])
-            self.token_type_ids.append(inputs['token_type_ids'])
-        self.ids = torch.tensor(self.ids, dtype=torch.long)
-        self.mask = torch.tensor(self.mask, dtype=torch.long)
-        self.token_type_ids = torch.tensor(self.token_type_ids, dtype=torch.long)
+        inputs = self.tokenizer.batch_encode_plus(
+            self.text,
+            add_special_tokens=True,
+            max_length=self.max_len,
+            truncation=self.truncation,
+            padding='max_length' if max_len is not None else 'longest',
+            return_token_type_ids=True
+        )
+        self.ids = torch.tensor(inputs['input_ids'], dtype=torch.long)
+        self.mask = torch.tensor(inputs['attention_mask'], dtype=torch.long)
+        self.token_type_ids = torch.tensor(inputs['token_type_ids'], dtype=torch.long)
         self.targets = torch.tensor(self.targets, dtype=torch.float)
 
     def __len__(self):
