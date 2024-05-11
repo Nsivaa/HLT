@@ -391,15 +391,16 @@ class Llama3():
     
     def evaluate(self, targets, predictions):
         # evaluate the model
-        # TODO: study on 'other' response? 
         if self.mode == "single":
             lb = LabelBinarizer()
         else:
             lb = MultiLabelBinarizer()
         bin_predictions = lb.fit_transform(predictions)
         bin_predictions = pd.DataFrame(bin_predictions, columns = lb.classes_) 
-        csv_name = self.mode + "_predictions.csv"
-        bin_predictions.to_csv(csv_name)
+        n_samples = 0 if self.samples is None else len(self.samples)
+        csv_name = "llama_" + self.mode + "_" + n_samples + "_predictions.csv"
+        csv_path = './results/llama_predictions/' + csv_name
+        bin_predictions.to_csv(csv_path)
         scores = {name: score(targets, bin_predictions) for name, score in self.scores.items()}
         plot_score_barplot(targets, bin_predictions, self.emotions)
         print(classification_report(targets, bin_predictions, target_names=self.emotions))
