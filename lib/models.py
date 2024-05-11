@@ -382,7 +382,7 @@ class Llama3():
                     response = self.generator(prompt)
                     if response == "True":
                         sentence_emotions.append(emotion)
-                    predictions.append(sentence_emotions)
+                predictions.append(sentence_emotions)
         except (ValueError, KeyError): # loop gives error at index of last entry (???) 
             pass
 
@@ -407,7 +407,7 @@ class Llama3():
         plot_score_barplot(targets, bin_predictions, self.emotions)
         print(classification_report(targets, bin_predictions, target_names=self.emotions))
         if not self.mode == "single":
-            plot_multilabel_confusion_heatmap(targets, bin_predictions, self.emotions)
+            plot_multilabel_confusion_heatmap(targets, bin_predictions, self.emotions, self.emotions)
         return scores
     
     
