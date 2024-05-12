@@ -376,7 +376,6 @@ class Llama3():
         try:
             for entry in tqdm(data.text, disable=not progress_bar):
                 sentence_emotions = []
-
                 for emotion in self.emotions:
                     prompt = f"""Consider the following sentence:\n {entry} \nDoes it evoke the emotion '{emotion}'? Answer with 'True' or 'False'."""
                     response = self.generator(prompt)
@@ -394,11 +393,8 @@ class Llama3():
             lb = LabelBinarizer()
         else:
             lb = MultiLabelBinarizer()
-            
         bin_predictions = lb.fit_transform(predictions)
-        print(len(bin_predictions))
-        print(len(targets))
-        bin_predictions = pd.DataFrame(bin_predictions, columns = lb.classes_) 
+        bin_predictions = pd.DataFrame(bin_predictions, columns = lb.classes_, dtype="int64") 
         n_samples = 0 if self.samples is None else len(self.samples)
         csv_name = "llama_" + self.mode + "_" + str(n_samples) + "_predictions.csv"
         csv_path = './results/llama_predictions/' + csv_name
@@ -407,7 +403,7 @@ class Llama3():
         plot_score_barplot(targets, bin_predictions, self.emotions)
         print(classification_report(targets, bin_predictions, target_names=self.emotions))
         if not self.mode == "single":
-            plot_multilabel_confusion_heatmap(targets, bin_predictions, self.emotions, self.emotions)
+            plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions)
         return scores
     
     
