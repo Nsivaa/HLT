@@ -258,8 +258,6 @@ class Llama_EmotionsData(Dataset):
     def __init__(self, dataframe) -> None:
         self.text = dataframe['text']
         self.targets = dataframe.drop(columns=['text']).to_numpy()
-        print(len(dataframe))
-        print(len(self.text))
     def __len__(self):
         return len(self.text)
 

@@ -363,7 +363,7 @@ class Llama3():
         if self.samples:
             prompt += f"""Look at these examples: \n {self.samples} \n Now""" 
         try:
-            for entry in tqdm(data, disable=not progress_bar):
+            for entry in tqdm(data.text, disable=not progress_bar):
                 prompt = f"""Classify the following sentence:\n {entry} \nChoose among the following emotions: {self.emotions}"""
                 predictions.append(self.generator(prompt))
 
@@ -375,16 +375,14 @@ class Llama3():
     def multi_predict(self, data, progress_bar = False):
         predictions = []
         try:
-            for entry in tqdm(data, disable=not progress_bar):
+            for entry in tqdm(data.text, disable=not progress_bar):
                 sentence_emotions = []
-
                 for emotion in self.emotions:
                     prompt = f"""Consider the following sentence:\n {entry} \nDoes it evoke the emotion '{emotion}'? Answer with 'True' or 'False'."""
                     response = self.generator(prompt)
                     if response == "True":
                         sentence_emotions.append(emotion)
-                    predictions.append(sentence_emotions)
-
+                predictions.append(sentence_emotions)
         except (ValueError, KeyError): # loop gives error at index of last entry (???) 
             pass
 
@@ -392,20 +390,21 @@ class Llama3():
     
     def evaluate(self, targets, predictions):
         # evaluate the model
-        # TODO: study on 'other' response? 
         if self.mode == "single":
             lb = LabelBinarizer()
         else:
             lb = MultiLabelBinarizer()
         bin_predictions = lb.fit_transform(predictions)
-        bin_predictions = pd.DataFrame(bin_predictions, columns = lb.classes_) 
-        csv_name = self.mode + "_predictions.csv"
-        bin_predictions.to_csv(csv_name)
+        bin_predictions = pd.DataFrame(bin_predictions, columns = lb.classes_, dtype="int64") 
+        n_samples = 0 if self.samples is None else len(self.samples)
+        csv_name = "llama_" + self.mode + "_" + str(n_samples) + "_predictions.csv"
+        csv_path = './results/llama_predictions/' + csv_name
+        bin_predictions.to_csv(csv_path)
         scores = {name: score(targets, bin_predictions) for name, score in self.scores.items()}
         plot_score_barplot(targets, bin_predictions, self.emotions)
         print(classification_report(targets, bin_predictions, target_names=self.emotions))
         if not self.mode == "single":
-            plot_multilabel_confusion_heatmap(targets, bin_predictions, self.emotions)
+            plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions)
         return scores
     
     
