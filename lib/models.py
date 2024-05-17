@@ -61,7 +61,7 @@ class SimpleModelInterface(ABC):
         cur_patience = self.params['val_patience']
         best_val_performance = -np.inf if checkpoint_score_maximize else np.inf
         for _ in tqdm(range(self.params['epochs']), disable=not progress_bar_epoch):
-            if progress_bar_epoch:
+            if progress_bar_step:
                 print(f'Epoch {_+1}/{self.params["epochs"]}')
             tr_loss = 0
             predictions_acc = []
@@ -187,31 +187,32 @@ class SimpleModelInterface(ABC):
         return self.val_loss
 
 '''
-function to perform statistical testing to compare 2 models using bootstrap
+function to perform statistical testing to compare 2 models using bootstrap given their predictions
 '''
-def bootstrap_test(model1, model2, testing_df, n_tests, sample_size, metric_fun, metric_name):
+def bootstrap_test(pred_1, pred_2, targets_df, n_tests, sample_size, metric_fun, metric_name, metric_params={}):
     # initial evaluation
-    score1 = model1.evaluate(testing_df, custom_scores={metric_name: metric_fun})[metric_name]
-    score2 = model2.evaluate(testing_df, custom_scores={metric_name: metric_fun})[metric_name]
+    score1 = metric_fun(targets_df, pred_1, **metric_params)
+    score2 = metric_fun(targets_df, pred_2, **metric_params)
     print(f'Initial {metric_name}: {score1} {score2}')
-    best_model = 1 if score1 > score2 else 2
+    best_model = 'first' if score1 > score2 else 'second'
     if score1 < score2:
-        model1, model2 = model2, model1
+        pred_1, pred_2 = pred_2, pred_1
         score1, score2 = score2, score1
     delta = score1 - score2
     print(f'Best model: {best_model}, with delta: {delta}')
     # perform bootstrap
     successes = 0
     for _ in range(n_tests):
-        sample = np.random.choice(testing_df.index, sample_size)
-        score1 = model1.evaluate(testing_df.loc[sample], custom_scores={metric_name: metric_fun})[metric_name]
-        score2 = model2.evaluate(testing_df.loc[sample], custom_scores={metric_name: metric_fun})[metric_name]
+        sample = np.random.choice(targets_df.index, sample_size)
+        score1 = metric_fun(targets_df.loc[sample], pred_1[sample], **metric_params)
+        score2 = metric_fun(targets_df.loc[sample], pred_2[sample], **metric_params)
         cur_delta = score1 - score2
         if cur_delta >= 2*delta:
             successes += 1
+    p_value = successes/n_tests
     print(f'Successes: {successes}/{n_tests}')
-    print(f'p-value: {successes/n_tests}')
-    return successes/n_tests
+    print(f'p-value: {p_value}')
+    return p_value
 
 ###########################
 # Roberta model
