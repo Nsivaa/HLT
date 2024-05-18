@@ -203,9 +203,9 @@ def bootstrap_test(pred_1, pred_2, targets_df, n_tests, sample_size, metric_fun,
     # perform bootstrap
     successes = 0
     for _ in range(n_tests):
-        sample = np.random.choice(targets_df.index, sample_size)
-        score1 = metric_fun(targets_df.loc[sample], pred_1[sample], **metric_params)
-        score2 = metric_fun(targets_df.loc[sample], pred_2[sample], **metric_params)
+        sample = np.random.choice(targets_df.shape[0], sample_size)
+        score1 = metric_fun(targets_df.iloc[sample], pred_1[sample], **metric_params)
+        score2 = metric_fun(targets_df.iloc[sample], pred_2[sample], **metric_params)
         cur_delta = score1 - score2
         if cur_delta >= 2*delta:
             successes += 1

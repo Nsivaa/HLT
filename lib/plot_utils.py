@@ -56,6 +56,7 @@ def plot_score_barplot(y_true, y_pred, class_names, metric_fun=f1_score, metric_
     plt.xlabel('Class')
     plt.ylabel(metric_name)
     plt.title(f'{metric_name} for each class')
+    plt.show()
 
 def plot_learning_curves(tr_loss, val_loss, score_name = 'loss'):
     plt.plot(tr_loss, label='train')
