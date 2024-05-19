@@ -6,7 +6,11 @@ from lib.scores import membership_score, tune_sigmoid_threshold
 import pandas as pd
 
 # create confusion matrix of multilabel classification
-def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize=False):
+def multilabel_confusion_matrix(_y_true, _y_pred, _label_true, _label_pred, normalize=False, transpose=False):
+    y_true = _y_true if not transpose else _y_pred
+    y_pred = _y_pred if not transpose else _y_true
+    label_true = _label_true if not transpose else _label_pred
+    label_pred = _label_pred if not transpose else _label_true
     n_true = len(label_true)
     n_pred = len(label_pred)
     confusion_matrix = np.zeros((n_true, n_pred))
@@ -23,15 +27,17 @@ def multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normaliz
         confusion_matrix = np.round(confusion_matrix, 2)
     return confusion_matrix
 
-def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False):
-    confusion_matrix = multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize)
+def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False, transpose=False):
+    confusion_matrix = multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize, transpose)
+    x_label = label_pred if not transpose else label_true
+    y_label = label_true if not transpose else label_pred
     fig, ax = plt.subplots(figsize=(15,10))
     # transform items to percentage
     if normalize:
         confusion_matrix = confusion_matrix * 100
-    sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=label_pred, yticklabels=label_true, cmap='coolwarm', fmt='.0f')
-    ax.set_xlabel('Predicted')
-    ax.set_ylabel('True')
+    sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=x_label, yticklabels=y_label, cmap='coolwarm', fmt='.0f')
+    ax.set_xlabel('Predicted' if not transpose else 'True')
+    ax.set_ylabel('True' if not transpose else 'Predicted')
     plt.show()
 
 def plot_threshold_tuning(y_true, y_pred, metric_fun=accuracy_score, metric_params={}, plot=False, is_maximization=True, metric_name='Accuracy'):

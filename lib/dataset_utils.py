@@ -76,18 +76,6 @@ def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOT
             dataset = dataset.values
     return dataset
 
-#TODO remove
-@deprecated(reason="Use goemotions_apply_emotion_mapping instead")
-def map_to_Ekman(dataset):
-    dataset["_joy"] = _or(dataset,  ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"])
-    dataset["_anger"] = _or(dataset, ["anger","annoyance", "disapproval"])
-    dataset["_surprise"] = _or(dataset, ["confusion", "curiosity", "realization", "surprise"])
-    dataset["_sadness"] = _or(dataset, ["disappointment", "embarrassment", "grief", "remorse", "sadness"])
-    dataset["_disgust"] = dataset["disgust"]
-    dataset["_fear"] = _or(dataset, ["fear","nervousness"])
-    dataset["_neutral"] = dataset["neutral"]
-
-
 def load_goemotions(k_hot_encode=False):
     # Load GoEmotions dataset
     goemotions_train = pd.read_csv(GOEMOTIONS_DATASET_DIR + '/train.tsv', sep='\t', header=None, index_col=False)
