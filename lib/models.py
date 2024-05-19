@@ -402,9 +402,10 @@ class Llama3():
         bin_predictions.to_csv(csv_path)
         scores = {name: score(targets, bin_predictions) for name, score in self.scores.items()}
         plot_score_barplot(targets, bin_predictions, self.emotions)
-        print(classification_report(targets, bin_predictions, target_names=self.emotions))
+        scores_dict = get_scores_dict(bin_predictions, targets, self.emotions)
+        custom_classification_report(scores_dict, self.emotions)
         if not self.mode == "single":
-            plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions)
+            plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions, normalize=True)
         return scores
     
     
