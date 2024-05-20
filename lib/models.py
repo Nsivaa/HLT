@@ -346,8 +346,6 @@ class Llama3():
 
     
     def classify(self, data : Llama_EmotionsData, progress_bar = False):
-        # data : test data to classify
-
         if self.mode == "single":
             predictions = self.single_predict(data, progress_bar = progress_bar)
         else:
@@ -356,8 +354,7 @@ class Llama3():
         self.evaluate(data.targets, predictions)
 
     def single_predict(self, data, progress_bar = False):
-        # emotions : emotions to classify
-        # test : test data to classify
+        # classifies single label data  
         predictions = []
         prompt = ""
         if self.samples:
@@ -373,6 +370,9 @@ class Llama3():
         return predictions
     
     def multi_predict(self, data, progress_bar = False):
+        # classifies multilabel data
+        # for each sentence, we ask if it evokes each emotion
+        # predictions will be a list of lists, each list containing the emotions evoked by the corresponding sentence
         predictions = []
         try:
             for entry in tqdm(data.text, disable=not progress_bar):
@@ -407,8 +407,3 @@ class Llama3():
         if not self.mode == "single":
             plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions, normalize=True)
         return scores
-    
-    
-    def flatten(xss):
-    # flattens list of lists into a single list
-        return [x for xs in xss for x in xs]
