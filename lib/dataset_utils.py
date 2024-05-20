@@ -81,7 +81,7 @@ def load_goemotions(k_hot_encode=False):
     goemotions_train = pd.read_csv(GOEMOTIONS_DATASET_DIR + '/train.tsv', sep='\t', header=None, index_col=False)
     goemotions_val = pd.read_csv(GOEMOTIONS_DATASET_DIR + '/dev.tsv', sep='\t', header=None, index_col=False)
     goemotions_test = pd.read_csv(GOEMOTIONS_DATASET_DIR + '/test.tsv', sep='\t', header=None, index_col=False)
-    # drop last column (tweet id)
+    # drop last column (comment id)
     goemotions_train = goemotions_train.drop(goemotions_train.columns[2], axis=1)
     goemotions_val = goemotions_val.drop(goemotions_val.columns[2], axis=1)
     goemotions_test = goemotions_test.drop(goemotions_test.columns[2], axis=1)
