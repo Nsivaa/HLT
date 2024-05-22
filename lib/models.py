@@ -375,10 +375,11 @@ class Llama3():
         # for each sentence, we ask if it evokes each emotion
         # predictions will be a list of lists, each list containing the emotions evoked by the corresponding sentence
         predictions = []
+        emotions = self.remove_ekman_prefix(self.emotions) if self.mode == "grouped" else self.emotions #remove "ekman_" prefix if present
         try:
             for entry in tqdm(data.text, disable=not progress_bar):
                 sentence_emotions = []
-                for emotion in self.emotions:
+                for emotion in emotions:
                     prompt = f"""Consider the following sentence:\n {entry} \nDoes it evoke the emotion '{emotion}'? Answer with 'True' or 'False'."""
                     response = self.generator(prompt)
                     if response == "True":
@@ -408,3 +409,10 @@ class Llama3():
         if not self.mode == "single":
             plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions, normalize=True)
         return scores
+
+    def remove_ekman_prefix(self, emotions: list, prefix = "ekman_"):
+        cleaned_emotions = []
+        for text in emotions:
+            if text.startswith(prefix):
+                cleaned_emotions.append(text[len(prefix):])
+        return cleaned_emotions 
