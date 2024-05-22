@@ -338,7 +338,8 @@ class Llama3():
                                                    device="cuda" if cuda.is_available() else "cpu")
         self.emotions = emotions
         self.mode = mode
-        self.choices = ["True", "False"] if self.mode == "multi" else self.emotions # if multilabel, we ask for "True" or "False" for each emotion, else for emotion name directly
+        # if multilabel, we ask for "True" or "False" for each emotion, else for emotion name directly. grouped is just to differentiate csv names
+        self.choices = ["True", "False"] if self.mode == "multi" or self.mode == "grouped" else self.emotions 
 
         self.generator = outlines.generate.choice(self.model, self.choices)
         self.scores = scores
