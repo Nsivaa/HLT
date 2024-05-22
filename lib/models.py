@@ -404,11 +404,12 @@ class Llama3():
         bin_predictions.to_csv(csv_path)
         scores = {name: score(targets, bin_predictions) for name, score in self.scores.items()}
         plot_score_barplot(targets, bin_predictions, self.emotions)
-        scores_dict = get_scores_dict(bin_predictions, targets, self.emotions)
-        custom_classification_report(scores_dict, self.emotions)
-        if not self.mode == "single":
-            plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions, normalize=True)
-        return scores
+        if not self.mode == "grouped": #evaluation is done in model_comparison.ipynb
+            scores_dict = get_scores_dict(bin_predictions, targets, self.emotions)
+            custom_classification_report(scores_dict, self.emotions)
+            if not self.mode == "single":
+                plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions, normalize=True)
+            return scores
 
     def remove_ekman_prefix(self, emotions: list, prefix = "ekman_"):
         cleaned_emotions = []
