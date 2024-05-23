@@ -13,7 +13,7 @@ def multilabel_confusion_matrix(_y_true, _y_pred, _label_true, _label_pred, norm
     label_pred = _label_pred if not transpose else _label_true
     n_true = len(label_true)
     n_pred = len(label_pred)
-    if n_true != n_pred:
+    if len(y_true) != len(y_pred):
         raise ValueError('Number of true and predicted labels must be the same')
     confusion_matrix = np.zeros((n_true, n_pred))
     for true_el, pred_el in zip(y_true, y_pred):
