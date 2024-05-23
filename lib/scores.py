@@ -30,7 +30,6 @@ def membership_score(y_true, y_pred):
         n_correct += t_pattern[np.argmax(p_pattern)] == 1
     return n_correct / len(y_true)
 
-
 def tune_sigmoid_threshold(y_true, y_pred, metric_fun=accuracy_score, metric_params={}, is_maximization=True, return_only_best=True):
     thresholds = np.arange(0, 1, 0.01)
     scores = [metric_fun(y_true, y_pred > t, **metric_params) for t in thresholds]
@@ -39,3 +38,21 @@ def tune_sigmoid_threshold(y_true, y_pred, metric_fun=accuracy_score, metric_par
     if return_only_best:
         scores = scores[best_id]
     return best_threshold, scores
+
+def sl_f1_macro(y_true, y_pred):
+    # flatten one hot encoded predictions and true labels
+    y_true = np.argmax(y_true, axis=1)
+    y_pred = np.argmax(y_pred, axis=1)
+    return f1_score(y_true, y_pred, average='macro')
+
+def sl_f1_micro(y_true, y_pred):
+    # flatten one hot encoded predictions and true labels
+    y_true = np.argmax(y_true, axis=1)
+    y_pred = np.argmax(y_pred, axis=1)
+    return f1_score(y_true, y_pred, average='micro')
+
+def sl_accuracy(y_true, y_pred):
+    # flatten one hot encoded predictions and true labels
+    y_true = np.argmax(y_true, axis=1)
+    y_pred = np.argmax(y_pred, axis=1)
+    return accuracy_score(y_true, y_pred)
