@@ -391,7 +391,8 @@ class Llama3():
                                                    device="cuda" if cuda.is_available() else "cpu")
         self.emotions = emotions
         self.mode = mode
-        self.choices = ["True", "False"] if self.mode == "multi" else self.emotions # if multilabel, we ask for "True" or "False" for each emotion, else for emotion name directly
+        # if multilabel, we ask for "True" or "False" for each emotion, else for emotion name directly. grouped is just to differentiate csv names
+        self.choices = ["True", "False"] if self.mode == "multi" or self.mode == "grouped" else self.emotions 
 
         self.generator = outlines.generate.choice(self.model, self.choices)
         self.scores = scores
@@ -427,10 +428,11 @@ class Llama3():
         # for each sentence, we ask if it evokes each emotion
         # predictions will be a list of lists, each list containing the emotions evoked by the corresponding sentence
         predictions = []
+        emotions = self.remove_ekman_prefix(self.emotions) if self.mode == "grouped" else self.emotions #remove "ekman_" prefix if present
         try:
             for entry in tqdm(data.text, disable=not progress_bar):
                 sentence_emotions = []
-                for emotion in self.emotions:
+                for emotion in emotions:
                     prompt = f"""Consider the following sentence:\n {entry} \nDoes it evoke the emotion '{emotion}'? Answer with 'True' or 'False'."""
                     response = self.generator(prompt)
                     if response == "True":
@@ -455,8 +457,16 @@ class Llama3():
         bin_predictions.to_csv(csv_path)
         scores = {name: score(targets, bin_predictions) for name, score in self.scores.items()}
         plot_score_barplot(targets, bin_predictions, self.emotions)
-        scores_dict = get_scores_dict(bin_predictions, targets, self.emotions)
-        custom_classification_report(scores_dict, self.emotions)
-        if not self.mode == "single":
-            plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions, normalize=True)
-        return scores
+        if not self.mode == "grouped": #evaluation is done in model_comparison.ipynb
+            scores_dict = get_scores_dict(bin_predictions, targets, self.emotions)
+            custom_classification_report(scores_dict, self.emotions)
+            if not self.mode == "single":
+                plot_multilabel_confusion_heatmap(targets, np.array(bin_predictions), self.emotions, self.emotions, normalize=True)
+            return scores
+
+    def remove_ekman_prefix(self, emotions: list, prefix = "ekman_"):
+        cleaned_emotions = []
+        for text in emotions:
+            if text.startswith(prefix):
+                cleaned_emotions.append(text[len(prefix):])
+        return cleaned_emotions 
