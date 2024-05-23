@@ -37,7 +37,6 @@ GOEMOTIONS_EKMAN_MAPPING = {
     "ekman_fear": ["fear","nervousness"]
 }
 
-#TODO check
 # twitter has different labels: joy, sadness, anger, surprise, fear, love
 GOEMOTIONS_TWITTER_MAPPING = {
     "twitter_joy": ["admiration", "amusement", "approval","desire", "excitement", "gratitude", "joy", "optimism", "pride", "relief"],

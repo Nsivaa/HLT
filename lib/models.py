@@ -50,7 +50,6 @@ class SimpleModelInterface(ABC):
     def _build_model(self):
         pass
 
-    # TODO: controlalre che per la maxLegth si utilizzi solo training e validation set
     # may be overridden to build a custom optimizer thus avoiding to rely on fixed parameters
     def _build_optimizer(self):
         return self.params['optimizer'](params=self.model.parameters(), lr=self.params['learning_rate'], weight_decay=self.params['regularization'])
@@ -231,16 +230,13 @@ class RobertaModule(torch.nn.Module):
             for i in range(frozen_layers):
                 for param in self.l1.encoder.layer[i].parameters():
                     param.requires_grad = False
-        #self.pre_classifier = torch.nn.Linear(768, 768)#TODO add_module?
-        self.dropout = torch.nn.Dropout(0.1)#TODO 0.3?
+        self.dropout = torch.nn.Dropout(0.1)
         self.classifier = torch.nn.Linear(768, n_classes)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        hidden_state = output_1[0]#TODO ???
+        hidden_state = output_1[0]
         pooler = hidden_state[:, 0]
-        #pooler = self.pre_classifier(pooler)
-        #pooler = torch.nn.ReLU()(pooler)#TODO remove?
         pooler = self.dropout(pooler)
         output = self.classifier(pooler)
         return output

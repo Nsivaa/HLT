@@ -139,3 +139,22 @@ def model_analysis(model, val_df, target_cols):
     best_out = pd.DataFrame(best_out, columns=target_cols)
     scores_dict = get_scores_dict(best_out, val_df, target_cols)
     custom_classification_report(scores_dict, target_cols)
+
+def twitter_model_analysis(model, val_df, target_cols):
+    # plot learning curves
+    tr_scores, val_scores = model.get_train_scores(), model.get_val_scores()
+    tr_loss, val_loss = model.get_train_loss(), model.get_val_loss()
+    plot_learning_curves(tr_loss, val_loss)
+    plot_learning_curves(tr_scores['f1_macro'], val_scores['f1_macro'], 'Macro F1')
+    # get predictions on validation set
+    out = model.predict(val_df)
+    target = val_df[target_cols].values
+    # take argmax
+    out = np.argmax(out, axis=1)
+    plot_multilabel_confusion_heatmap(target, out, label_true=target_cols, label_pred=target_cols, normalize=True)
+    # bar plot over classes
+    plot_score_barplot(target, out, target_cols)
+    # print scores
+    out = pd.DataFrame(out, columns=target_cols)
+    scores_dict = get_scores_dict(out, val_df, target_cols)
+    custom_classification_report(scores_dict, target_cols)
