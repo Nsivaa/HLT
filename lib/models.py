@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 from tqdm.notebook import tqdm
-from transformers import RobertaModel, RobertaTokenizer, BertModel, BertTokenizer
+from transformers import RobertaModel, RobertaTokenizer, BertModel, BertTokenizer, AutoTokenizer, AutoModelForMaskedLM
 import outlines
 from torch import cuda
 from lib.dataset_utils import *
@@ -320,6 +320,59 @@ class Bert(SimpleModelInterface):
 
     def _create_model_params(self, params_dict):
         params = BERT_DEFAULT_PARAMS.copy()
+        params.update(params_dict)
+        return params
+
+    def __init__(self, scores={}, model_params_dict={}, checkpoint=None):
+        super().__init__(scores, model_params_dict, checkpoint=checkpoint)
+
+###########################
+# SocBert model
+###########################
+
+class SocbertMultiLabelClassifier(torch.nn.Module):
+    def __init__(self, n_classes):
+        super(SocbertMultiLabelClassifier, self).__init__()
+        self.socbert = AutoModelForMaskedLM.from_pretrained("sarkerlab/SocBERT-base")
+        self.socbert.lm_head = torch.nn.Identity()
+        self.dropout = torch.nn.Dropout(0.1)
+        self.classifier = torch.nn.Linear(768,n_classes)
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.socbert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        #you get the hidden rappresentation of CLS token
+        hidden_state = outputs[0]
+        cls_output = hidden_state[:, 0]
+        #cls_output = outputs.hidden_states[-1][:, 0, :]
+        outputs = self.dropout(cls_output)
+        logits = self.classifier(cls_output)
+        return logits
+    
+    def get_out_dim(self):
+        return self.classifier.out_features
+    
+SOCBERT_DEFAULT_PARAMS = {
+    'optimizer': torch.optim.Adam,
+    'tokenizer': AutoTokenizer.from_pretrained("sarkerlab/SocBERT-base",truncation=True, do_lower_case=False),
+    'tokenizer_max_len': None,
+    'batch_size': 16,
+    'loss_function': torch.nn.BCEWithLogitsLoss(),
+    'epochs': 1,
+    'learning_rate': 1e-05,
+    'regularization': 0,
+    'val_patience': np.inf,
+    'clip_grad_norm': -1
+}
+
+class Socbert(SimpleModelInterface):
+    def _build_model(self):
+        params = self.get_params()
+        if 'n_classes' not in params:
+            raise ValueError('Number of classes not specified in model parameters')
+        return SocbertMultiLabelClassifier(params['n_classes'])
+
+    def _create_model_params(self, params_dict):
+        params = SOCBERT_DEFAULT_PARAMS.copy()
         params.update(params_dict)
         return params
 
