@@ -153,6 +153,8 @@ def twitter_model_analysis(model, val_df, target_cols):
     target = val_df[target_cols].values
     # take argmax
     out = np.argmax(out, axis=1)
+    # convert out to one hot
+    out = np.eye(len(target_cols))[out]
     plot_multilabel_confusion_heatmap(target, out, label_true=target_cols, label_pred=target_cols, normalize=True)
     # bar plot over classes
     plot_score_barplot(target, out, target_cols)
