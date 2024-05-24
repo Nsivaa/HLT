@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 from tqdm.notebook import tqdm
-from transformers import RobertaModel, RobertaTokenizer, BertModel, BertTokenizer, AutoTokenizer, AutoModelForMaskedLM
+from transformers import RobertaModel, RobertaTokenizer, BertModel, BertTokenizer, AutoTokenizer, AutoModel
 import outlines
 from torch import cuda
 from lib.dataset_utils import *
@@ -329,8 +329,7 @@ class Bert(SimpleModelInterface):
 class SocbertMultiLabelClassifier(torch.nn.Module):
     def __init__(self, n_classes):
         super(SocbertMultiLabelClassifier, self).__init__()
-        self.socbert = AutoModelForMaskedLM.from_pretrained("sarkerlab/SocBERT-base")
-        self.socbert.lm_head = torch.nn.Identity()
+        self.socbert = AutoModel.from_pretrained("sarkerlab/SocBERT-base")
         self.dropout = torch.nn.Dropout(0.1)
         self.classifier = torch.nn.Linear(768,n_classes)
 
@@ -339,7 +338,6 @@ class SocbertMultiLabelClassifier(torch.nn.Module):
         #you get the hidden rappresentation of CLS token
         hidden_state = outputs[0]
         cls_output = hidden_state[:, 0]
-        #cls_output = outputs.hidden_states[-1][:, 0, :]
         outputs = self.dropout(cls_output)
         logits = self.classifier(cls_output)
         return logits
