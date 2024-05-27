@@ -29,9 +29,9 @@ GOEMOTIONS_LABELS = ['admiration', 'amusement', 'disapproval', 'disgust',
        'disappointment']
 
 GOEMOTIONS_EKMAN_MAPPING = {
-    "ekman_joy": ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"],
+    "ekman_joy": ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief", "realization"],
     "ekman_anger": ["anger","annoyance", "disapproval"],
-    "ekman_surprise": ["confusion", "curiosity", "realization", "surprise"],
+    "ekman_surprise": ["confusion", "curiosity", "surprise"],
     "ekman_sadness": ["disappointment", "embarrassment", "grief", "remorse", "sadness"],
     "ekman_disgust": ["disgust"],
     "ekman_fear": ["fear","nervousness"]
