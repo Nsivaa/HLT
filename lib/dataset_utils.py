@@ -21,6 +21,7 @@ TWITTER_DATASET_DIR = DATASET_DIR + 'TwitterDataSplit/'
 GOEMOTIONSCLEAN_DATASET_DIR = DATASET_DIR + 'GoEmotionsCleaned/'
 TWITTERCLEAN_DATASET_DIR = DATASET_DIR + 'TwitterDataCleaned/'
 
+LABEL_COLS = ['admiration','amusement','disapproval','disgust','embarrassment','excitement','fear', 'gratitude', 'grief', 'joy', 'love', 'nervousness', 'anger', 'optimism', 'pride', 'realization', 'relief', 'remorse', 'sadness','surprise','neutral','annoyance', 'approval', 'caring', 'confusion', 'curiosity', 'desire', 'disappointment']
 GOEMOTIONS_LABELS = ['admiration', 'amusement', 'disapproval', 'disgust',
        'embarrassment', 'excitement', 'fear', 'gratitude', 'grief', 'joy',
        'love', 'nervousness', 'anger', 'optimism', 'pride', 'realization',
@@ -29,9 +30,9 @@ GOEMOTIONS_LABELS = ['admiration', 'amusement', 'disapproval', 'disgust',
        'disappointment']
 
 GOEMOTIONS_EKMAN_MAPPING = {
-    "ekman_joy": ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief", "realization"],
+    "ekman_joy": ["admiration", "amusement", "approval", "caring","desire", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"],
     "ekman_anger": ["anger","annoyance", "disapproval"],
-    "ekman_surprise": ["confusion", "curiosity", "surprise"],
+    "ekman_surprise": ["confusion", "curiosity", "surprise","realization"],
     "ekman_sadness": ["disappointment", "embarrassment", "grief", "remorse", "sadness"],
     "ekman_disgust": ["disgust"],
     "ekman_fear": ["fear","nervousness"]
@@ -39,9 +40,9 @@ GOEMOTIONS_EKMAN_MAPPING = {
 
 # twitter has different labels: joy, sadness, anger, surprise, fear, love
 GOEMOTIONS_TWITTER_MAPPING = {
-    "twitter_joy": ["admiration", "amusement", "approval","desire", "excitement", "gratitude", "joy", "optimism", "pride", "relief"],
+    "twitter_joy": ["admiration", "amusement", "approval","desire", "excitement", "gratitude", "joy", "optimism", "pride", "relief","realization"],
     "twitter_anger": ["anger","annoyance", "disapproval"],
-    "twitter_surprise": ["confusion", "curiosity", "realization", "surprise"],
+    "twitter_surprise": ["confusion", "curiosity", "surprise"],
     "twitter_sadness": ["disappointment", "embarrassment", "grief", "remorse", "sadness", "disgust"],
     "twitter_love": ["love", "caring"],
     "twitter_fear": ["fear","nervousness"]

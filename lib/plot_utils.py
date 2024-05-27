@@ -3,7 +3,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score, classification_report
 from lib.scores import membership_score, tune_sigmoid_threshold
+from lib.dataset_utils import GOEMOTIONS_TWITTER_MAPPING
 import pandas as pd
+
 
 # create confusion matrix of multilabel classification
 def multilabel_confusion_matrix(_y_true, _y_pred, _label_true, _label_pred, normalize=False, transpose=False):
@@ -29,7 +31,7 @@ def multilabel_confusion_matrix(_y_true, _y_pred, _label_true, _label_pred, norm
         confusion_matrix = np.round(confusion_matrix, 2)
     return confusion_matrix
 
-def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False, transpose=False):
+def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False, transpose=False,highlight_borders=False):
     confusion_matrix = multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize, transpose)
     x_label = label_pred if not transpose else label_true
     y_label = label_true if not transpose else label_pred
@@ -40,6 +42,21 @@ def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, no
     sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=x_label, yticklabels=y_label, cmap='coolwarm', fmt='.0f')
     ax.set_xlabel('Predicted' if not transpose else 'True')
     ax.set_ylabel('True' if not transpose else 'Predicted')
+    if highlight_borders:
+        matrix_predicted = {}
+        for elem,i in zip(label_pred,range(len(label_pred))):
+            matrix_predicted[elem]=i
+            matrix_true = ["anger","fear","joy","love","sadness","surprise"]
+            cells = []
+
+        for i in range(6):
+            emotion="twitter_"+matrix_true[i]
+            for elem in GOEMOTIONS_TWITTER_MAPPING[emotion]:
+                j=matrix_predicted[elem]
+                cells.append((i,j))
+        for elem in cells:
+            ax.add_patch(plt.Rectangle(elem, 1, 1, fill=False, edgecolor='black', lw=2))
+
     plt.show()
 
 def plot_threshold_tuning(y_true, y_pred, metric_fun=accuracy_score, metric_params={}, plot=False, is_maximization=True, metric_name='Accuracy'):
