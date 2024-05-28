@@ -410,7 +410,7 @@ class Llama3():
                 prompt = f"""Classify the following sentence:\n {entry} \nChoose among the following emotions: {self.emotions}"""
                 predictions.append(self.generator(prompt))
 
-        except (ValueError, KeyError): # loop gives error at index of last entry (???)
+        except (ValueError, KeyError): # loop gives error at index of last entry 
             pass
 
         return predictions
@@ -430,7 +430,7 @@ class Llama3():
                     if response == "True":
                         sentence_emotions.append(emotion)
                 predictions.append(sentence_emotions)
-        except (ValueError, KeyError): # loop gives error at index of last entry (???) 
+        except (ValueError, KeyError): # loop gives error at index of last entry 
             pass
 
         return predictions
