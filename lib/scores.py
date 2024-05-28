@@ -22,8 +22,9 @@ def f1_micro(y_true, y_pred):
     _, best_res = tune_sigmoid_threshold(y_true, y_pred, f1_score, {'average': 'micro', 'zero_division': 0})
     return best_res
 '''
-weaker accuracy, each prediction is considered correct if its maximum probability class is one of the true classes
+weaker accuracy, each prediction is considered correct if its maximum probability class is one of the true 
 '''
+#TODO: rimuovere membership score ????
 def membership_score(y_true, y_pred):
     n_correct = 0
     for t_pattern, p_pattern in zip(y_true, y_pred):

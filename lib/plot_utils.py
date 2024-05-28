@@ -6,7 +6,6 @@ from lib.scores import membership_score, tune_sigmoid_threshold
 from lib.dataset_utils import GOEMOTIONS_TWITTER_MAPPING
 import pandas as pd
 
-
 # create confusion matrix of multilabel classification
 def multilabel_confusion_matrix(_y_true, _y_pred, _label_true, _label_pred, normalize=False, transpose=False):
     y_true = _y_true if not transpose else _y_pred
@@ -42,6 +41,8 @@ def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, no
     sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=x_label, yticklabels=y_label, cmap='coolwarm', fmt='.0f')
     ax.set_xlabel('Predicted' if not transpose else 'True')
     ax.set_ylabel('True' if not transpose else 'Predicted')
+    # We need to build an array with the coordinates within the confusion matrix of the couples
+    # (emotion_Twitter, emotion_GOEmotion), where emotion_GOEmotion is mapped into emotion_Twitter
     if highlight_borders:
         matrix_predicted = {}
         for elem,i in zip(label_pred,range(len(label_pred))):

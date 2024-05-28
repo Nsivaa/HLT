@@ -50,13 +50,15 @@ GOEMOTIONS_TWITTER_MAPPING = {
 
 GOEMOTIONS_EMOTIONS = ["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise", "neutral"]
 
+# _or/2 builds the column of the twitter mapped dataset, using the goemotion labels in 'array' which are the ones mapped to the column built
 def _or(dataset, array):
+    # value as the same size dataset but with only one column
     value = pd.Series([0]*len(dataset))
     for column in array:
         value = value | dataset[column]
     return value 
 
-#TODO cambiare nome parametro isDataframe?, .values?????
+# taking in input a dataset, returns a new dataset where the emotions of each entry have been mapped according to 'mapping'
 def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOTIONS_EKMAN_MAPPING,isDataframe=True):
     # dataframe == false => we want to map the values of a tensor so we change it into a dataframe first
     if not(isDataframe):
@@ -66,13 +68,10 @@ def goemotions_apply_emotion_mapping(dataset, drop_original=True, mapping=GOEMOT
     if drop_original:
         # drop goemotion columns
         dataset = dataset.drop(columns=GOEMOTIONS_EMOTIONS)
-        #we must drop every entry whose only label was neural
+        # we must drop every entry whose only label was neutral
         if isDataframe:
             dataset = dataset.loc[dataset[mapping.keys()].sum(axis=1) > 0]
         else:
-            # Il .predict sarà fatto nel caso post-mapped su un dataset di test già con 6 emozioni (e colonna "neutral rimossa").
-            # Quindi se a seguito della fit il modello predicta una riga con emozione neutrale che sarà per forza di cose a seguito del mapping un falso positivo
-            # (dato che non esisterà più il label "neutral"), la predic va trattata come sbagliata e non rimossa 
             dataset = dataset.values
     return dataset
 
@@ -155,14 +154,6 @@ DATA_LOADERS = {
 
 def load_dataset(dataset: DatasetEnum, **kwargs):
     return DATA_LOADERS[dataset](**kwargs)
-
-def compute_max_tokens(dataframe_list, tokenizer):
-    max_len = 0
-    for dataframe in dataframe_list:
-        for text in dataframe['text']:
-            tokens = tokenizer.encode(text)
-            max_len = max(max_len, len(tokens))
-    return max_len
 
 '''
 used for dataset in pytorch, tokenizes text once during initialization (best suited for small datasets)
