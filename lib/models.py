@@ -379,8 +379,6 @@ class Socbert(SimpleModelInterface):
 
 class Llama3():
     def __init__(self, name,  scores={},  samples = None, mode = "single", emotions = None):
-        # shots : samples to show in prompt (to be taken from training data?), for now are hardcoded
-
         self.model = outlines.models.transformers(name, model_kwargs ={"torch_dtype": torch.float16},
                                                    device="cuda" if cuda.is_available() else "cpu")
         self.emotions = emotions
