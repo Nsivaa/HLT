@@ -5,6 +5,7 @@ from sklearn.metrics import accuracy_score, f1_score, jaccard_score, classificat
 from lib.scores import membership_score, tune_sigmoid_threshold
 from lib.dataset_utils import GOEMOTIONS_TWITTER_MAPPING
 import pandas as pd
+from operator import xor
 
 # create confusion matrix of multilabel classification
 def multilabel_confusion_matrix(_y_true, _y_pred, _label_true, _label_pred, normalize=False, transpose=False):
@@ -30,8 +31,9 @@ def multilabel_confusion_matrix(_y_true, _y_pred, _label_true, _label_pred, norm
         confusion_matrix = np.round(confusion_matrix, 2)
     return confusion_matrix
 
-# highlight borders is a dictionary with keys as the true class and values as the corresponding predicted class
-def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False, transpose=False,highlight_borders=None):
+# normalize is a boolean that indicates whether to normalize each row of the confusion matrix
+# highlight_borders_map is a dictionary with keys as the true class and values as the corresponding predicted class
+def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, normalize=False, transpose=False, highlight_borders_map=None, highlight_map_true_to_pred=True):
     confusion_matrix = multilabel_confusion_matrix(y_true, y_pred, label_true, label_pred, normalize, transpose)
     x_label = label_pred if not transpose else label_true
     y_label = label_true if not transpose else label_pred
@@ -42,32 +44,21 @@ def plot_multilabel_confusion_heatmap(y_true, y_pred, label_true, label_pred, no
     sns.heatmap(confusion_matrix, annot=True, ax=ax, xticklabels=x_label, yticklabels=y_label, cmap='coolwarm', fmt='.0f')
     ax.set_xlabel('Predicted' if not transpose else 'True')
     ax.set_ylabel('True' if not transpose else 'Predicted')
-    # highlight borders of the matrix according to the mapping provided in highlight_borders
+    # highlight borders of the matrix according to the mapping provided in highlight_borders_map
     # useful to highlight which predicted class is mapped correctly to the corresponding true class
-
-    # if highlight_borders:
-    #     matrix_predicted = {}
-    #     for i, elem in enumerate(label_pred):
-    #         matrix_predicted[elem]=i
-    #         matrix_true = ["anger","fear","joy","love","sadness","surprise"]
-    #         cells = []
-
-    #     for i in range(6):
-    #         emotion="twitter_"+matrix_true[i]
-    #         for elem in GOEMOTIONS_TWITTER_MAPPING[emotion]:
-    #             j=matrix_predicted[elem]
-    #             cells.append((i,j))
-    #     for elem in cells:
-    #         ax.add_patch(plt.Rectangle(elem, 1, 1, fill=False, edgecolor='black', lw=2))
-
-    if highlight_borders is not None:
-        for i in range(len(x_label)):
-            if x_label[i] in highlight_borders:
+    label_to_map = label_true if highlight_map_true_to_pred else label_pred
+    mapped_label = label_pred if highlight_map_true_to_pred else label_true
+    is_true_on_x = not transpose
+    couple_first_is_to_map = xor(highlight_map_true_to_pred, is_true_on_x)
+    if highlight_borders_map is not None:
+        for i in range(len(label_to_map)):
+            if label_to_map[i] in highlight_borders_map:
                 # get list of predicted classes to highlight
-                pred_classes = highlight_borders[x_label[i]]
+                pred_classes = highlight_borders_map[label_to_map[i]]
                 for pred_class in pred_classes:
-                    j = x_label.index(pred_class)
-                    ax.add_patch(plt.Rectangle((j, i), 1, 1, fill=False, edgecolor='black', lw=2))
+                    j = mapped_label.index(pred_class)
+                    couple_to_highlight = (i, j) if couple_first_is_to_map else (j, i)
+                    ax.add_patch(plt.Rectangle(couple_to_highlight, 1, 1, fill=False, edgecolor='black', lw=2))
     plt.show()
 
 def plot_threshold_tuning(y_true, y_pred, metric_fun=accuracy_score, metric_params={}, plot=False, is_maximization=True, metric_name='Accuracy'):
