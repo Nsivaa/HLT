@@ -50,9 +50,9 @@ GOEMOTIONS_TWITTER_MAPPING = {
 
 GOEMOTIONS_EMOTIONS = ["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise", "neutral"]
 
-# _or/2 builds the column of the twitter mapped dataset, using the goemotion labels in 'array' which are the ones mapped to the column built
+#  execute the or operation on the dataset with the columns specified in the array
 def _or(dataset, array):
-    # value as the same size dataset but with only one column
+    # column as long as the dataset with all 0s as a base for or operations
     value = pd.Series([0]*len(dataset))
     for column in array:
         value = value | dataset[column]
