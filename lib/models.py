@@ -169,6 +169,7 @@ class SimpleModelInterface(ABC):
             scores['loss'] = loss
         return scores
 
+    # predicts 'testing_df' and returns the scores
     def evaluate(self, testing_df, scores=None, progress_bar=False):
         testing_loader = create_data_loader_from_dataframe(testing_df, self.params['tokenizer'], self.params['tokenizer_max_len'], batch_size=self.params['batch_size'], shuffle=False)
         return self._evaluate(testing_loader, scores, progress_bar=progress_bar)
@@ -202,12 +203,16 @@ def bootstrap_test(pred_1, pred_2, targets_df, n_tests, sample_size, metric_fun,
     # perform bootstrap
     successes = 0
     for _ in range(n_tests):
+        # sample from targets
         sample = np.random.choice(targets_df.shape[0], sample_size)
+        # compute scores on sample
         score1 = metric_fun(targets_df.iloc[sample], pred_1[sample], **metric_params)
         score2 = metric_fun(targets_df.iloc[sample], pred_2[sample], **metric_params)
+        # check if the difference is significant
         cur_delta = score1 - score2
         if cur_delta >= 2*delta:
             successes += 1
+    # compute p_value
     p_value = successes/n_tests
     print(f'Successes: {successes}/{n_tests}')
     print(f'p-value: {p_value}')
@@ -225,6 +230,7 @@ class RobertaModule(torch.nn.Module):
         super(RobertaModule, self).__init__()
         self.l1 = RobertaModel.from_pretrained("roberta-base")
         if frozen_layers != -1:
+            # freeze layers
             for param in self.l1.embeddings.parameters():
                 param.requires_grad = False
             for i in range(frozen_layers):
@@ -235,8 +241,10 @@ class RobertaModule(torch.nn.Module):
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        # get representation of CLS token
         hidden_state = output_1[0]
         pooler = hidden_state[:, 0]
+        # get output
         pooler = self.dropout(pooler)
         output = self.classifier(pooler)
         return output
@@ -335,9 +343,10 @@ class SocbertMultiLabelClassifier(torch.nn.Module):
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         outputs = self.socbert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        #you get the hidden rappresentation of CLS token
+        # get the rappresentation of CLS token
         hidden_state = outputs[0]
         cls_output = hidden_state[:, 0]
+        # get output
         outputs = self.dropout(cls_output)
         logits = self.classifier(cls_output)
         return logits
@@ -435,6 +444,8 @@ class Llama3():
 
         return predictions
     
+    # evaluate the model
+    # currently not fully used: evaluation is done in model_comparison.ipynb
     def evaluate(self, targets, predictions):
         # evaluate the model
         if self.mode == "single":

@@ -75,6 +75,7 @@ def plot_threshold_tuning(y_true, y_pred, metric_fun=accuracy_score, metric_para
         print(f'Best threshold: {best_threshold}')
         print(f'Best {metric_name}: {max(scores) if is_maximization else min(scores)}')
 
+# plot barplot of scores for each class
 def plot_score_barplot(y_true, y_pred, class_names, metric_fun=f1_score, metric_params={'average': None, 'zero_division':0}, metric_name='F1 score'):
     class_scores = metric_fun(y_true, y_pred, **metric_params)
     plt.figure(figsize=(10,5))
@@ -97,6 +98,7 @@ def plot_learning_curves(tr_loss, val_loss, score_name = 'loss'):
     plt.xticks(np.arange(0, len(tr_loss), 1), np.arange(1, len(tr_loss) + 1, 1))
     plt.show()
     
+# extension of sklearn classification report, prints additional metrics
 def custom_classification_report(scores_dict, labels_list):
     # print classification report
     print("Classification Report:")
@@ -116,6 +118,7 @@ def custom_classification_report(scores_dict, labels_list):
     # print accuracy
     print(f"{'Accuracy':<20}{scores_dict['accuracy']:20.2f}")
 
+# returns a dictionary with scores for each label, and aggregated scores
 def get_scores_dict(predictions, test_df, labels_list):
     # collect scores in a dictionary
     scores = classification_report(test_df[labels_list].values, predictions.values, target_names=labels_list, output_dict=True, zero_division=0)
@@ -174,6 +177,7 @@ def twitter_model_analysis(model, val_df, target_cols):
     out = np.argmax(out, axis=1)
     # convert out to one hot
     out = np.eye(len(target_cols))[out]
+    # print confusion matrix
     plot_multilabel_confusion_heatmap(target, out, label_true=target_cols, label_pred=target_cols, normalize=True)
     # bar plot over classes
     plot_score_barplot(target, out, target_cols)
